@@ -1,0 +1,43 @@
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE & Editor Configs
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+
+# Web Server & Environment
+.env
+.env.local
+.env.*.local
+*.log
+
+# Storage Runtime Data (Keep folder structure)
+storage/logs/*.log
+storage/backups/*.sql
+storage/backups/*.sqlite
+storage/invoices/*.pdf
+storage/attachments/*
+!storage/logs/.gitkeep
+!storage/backups/.gitkeep
+!storage/invoices/.gitkeep
+!storage/attachments/.gitkeep
+
+# Node Modules & Build (if used in theme templates)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Composer Vendor (if added in the future)
+/vendor/
