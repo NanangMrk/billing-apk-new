@@ -237,14 +237,34 @@ class InventoryController {
         }
 
         $items = $pdo->query("SELECT * FROM inventory_items WHERE status = 'active' ORDER BY name ASC")->fetchAll();
-        $history = $pdo->query("
+        
+        // Filter logic
+        $filterItem = $_GET['item_id'] ?? '';
+        $filterMonth = $_GET['month'] ?? date('Y-m');
+
+        $whereClause = "t.type = 'in'";
+        $params = [];
+
+        if ($filterItem !== '') {
+            $whereClause .= " AND t.item_id = ?";
+            $params[] = $filterItem;
+        }
+
+        if ($filterMonth !== '') {
+            $whereClause .= " AND strftime('%Y-%m', t.transaction_date) = ?";
+            $params[] = $filterMonth;
+        }
+
+        $stmt = $pdo->prepare("
             SELECT t.*, i.name as item_name, i.unit, u.name as creator_name 
             FROM inventory_transactions t 
             JOIN inventory_items i ON t.item_id = i.id 
             LEFT JOIN users u ON t.created_by = u.id 
-            WHERE t.type = 'in' 
-            ORDER BY t.id DESC LIMIT 50
-        ")->fetchAll();
+            WHERE $whereClause 
+            ORDER BY t.id DESC LIMIT 200
+        ");
+        $stmt->execute($params);
+        $history = $stmt->fetchAll();
 
         $pageTitle = 'Penerimaan Barang Masuk (Goods In)';
 
@@ -373,14 +393,34 @@ class InventoryController {
         }
 
         $items = $pdo->query("SELECT * FROM inventory_items WHERE status = 'active' ORDER BY name ASC")->fetchAll();
-        $history = $pdo->query("
+        
+        // Filter logic
+        $filterItem = $_GET['item_id'] ?? '';
+        $filterMonth = $_GET['month'] ?? date('Y-m');
+
+        $whereClause = "t.type = 'out'";
+        $params = [];
+
+        if ($filterItem !== '') {
+            $whereClause .= " AND t.item_id = ?";
+            $params[] = $filterItem;
+        }
+
+        if ($filterMonth !== '') {
+            $whereClause .= " AND strftime('%Y-%m', t.transaction_date) = ?";
+            $params[] = $filterMonth;
+        }
+
+        $stmt = $pdo->prepare("
             SELECT t.*, i.name as item_name, i.unit, u.name as creator_name 
             FROM inventory_transactions t 
             JOIN inventory_items i ON t.item_id = i.id 
             LEFT JOIN users u ON t.created_by = u.id 
-            WHERE t.type = 'out' 
-            ORDER BY t.id DESC LIMIT 50
-        ")->fetchAll();
+            WHERE $whereClause 
+            ORDER BY t.id DESC LIMIT 200
+        ");
+        $stmt->execute($params);
+        $history = $stmt->fetchAll();
 
         $pageTitle = 'Pengeluaran Barang (Goods Out)';
 

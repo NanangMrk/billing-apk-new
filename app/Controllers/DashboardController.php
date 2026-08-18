@@ -12,12 +12,28 @@ class DashboardController {
         $pdo = getDbConnection();
 
         // 1. Customer KPIs
-        $custTotal = (int)$pdo->query("SELECT COUNT(*) FROM customers")->fetchColumn();
-        $custActive = (int)$pdo->query("SELECT COUNT(*) FROM customers WHERE status = 'active'")->fetchColumn();
-        $custSuspended = (int)$pdo->query("SELECT COUNT(*) FROM customers WHERE status = 'suspended'")->fetchColumn();
+        $picFilterCust = "";
+        $picFilterInv = "";
+        $currentMonth = date('Y-m');
+        $paramsBill = [$currentMonth];
+
+        if (AuthService::isPic()) {
+            $picId = AuthService::getPicId() ?: -1;
+            $picFilterCust = " WHERE pic_id = {$picId} ";
+            // active/suspended check needs AND if WHERE already exists
+            
+            $custTotal = (int)$pdo->query("SELECT COUNT(*) FROM customers {$picFilterCust}")->fetchColumn();
+            $custActive = (int)$pdo->query("SELECT COUNT(*) FROM customers WHERE status = 'active' AND pic_id = {$picId}")->fetchColumn();
+            $custSuspended = (int)$pdo->query("SELECT COUNT(*) FROM customers WHERE status = 'suspended' AND pic_id = {$picId}")->fetchColumn();
+
+            $picFilterInv = " AND i.customer_id IN (SELECT id FROM customers WHERE pic_id = {$picId}) ";
+        } else {
+            $custTotal = (int)$pdo->query("SELECT COUNT(*) FROM customers")->fetchColumn();
+            $custActive = (int)$pdo->query("SELECT COUNT(*) FROM customers WHERE status = 'active'")->fetchColumn();
+            $custSuspended = (int)$pdo->query("SELECT COUNT(*) FROM customers WHERE status = 'suspended'")->fetchColumn();
+        }
 
         // 2. Billing KPIs (Current Month)
-        $currentMonth = date('Y-m');
         $stmtBill = $pdo->prepare("
             SELECT 
                 COUNT(*) as total_invoices,
@@ -25,10 +41,10 @@ class DashboardController {
                 COALESCE(SUM(paid_amount), 0) as paid_amount,
                 COALESCE(SUM(balance_due), 0) as unpaid_amount,
                 COALESCE(SUM(CASE WHEN payment_status = 'overdue' THEN balance_due ELSE 0 END), 0) as overdue_amount
-            FROM invoices 
-            WHERE billing_period = ?
+            FROM invoices i
+            WHERE i.billing_period = ? {$picFilterInv}
         ");
-        $stmtBill->execute([$currentMonth]);
+        $stmtBill->execute($paramsBill);
         $billKpi = $stmtBill->fetch();
 
         // 3. Finance KPIs (Cash balance, monthly income, monthly expense)
@@ -61,6 +77,7 @@ class DashboardController {
             SELECT i.*, c.name as customer_name, c.customer_no 
             FROM invoices i 
             JOIN customers c ON i.customer_id = c.id 
+            " . (AuthService::isPic() ? "WHERE c.pic_id = " . (AuthService::getPicId() ?: -1) : "") . "
             ORDER BY i.id DESC LIMIT 5
         ")->fetchAll();
 

@@ -94,16 +94,38 @@ $offset = $offset ?? 0;
       <?php if (!empty($_GET['status'])): ?><input type="hidden" name="status" value="<?php echo Helper::e($_GET['status']); ?>"><?php endif; ?>
       <?php if (!empty($_GET['period'])): ?><input type="hidden" name="period" value="<?php echo Helper::e($_GET['period']); ?>"><?php endif; ?>
       <?php if (!empty($_GET['package_id'])): ?><input type="hidden" name="package_id" value="<?php echo Helper::e($_GET['package_id']); ?>"><?php endif; ?>
-      <?php if (!empty($_GET['location_id'])): ?><input type="hidden" name="location_id" value="<?php echo Helper::e($_GET['location_id']); ?>"><?php endif; ?>
-      <?php if (!empty($_GET['pic_id'])): ?><input type="hidden" name="pic_id" value="<?php echo Helper::e($_GET['pic_id']); ?>"><?php endif; ?>
       <input type="hidden" name="limit" value="<?php echo Helper::e($limitValue); ?>">
+
+      <!-- Area / Location Filter -->
+      <div class="relative hidden md:block">
+        <select name="location_id" onchange="this.form.submit()" class="text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-2xl px-3 py-2 sm:py-2.5 shadow-soft-xs focus:outline-none focus:border-purple-500 cursor-pointer">
+          <option value="">-- Semua Area --</option>
+          <?php foreach ($locations as $loc): ?>
+            <option value="<?php echo $loc['id']; ?>" <?php echo (((int)($_GET['location_id'] ?? 0)) === (int)$loc['id']) ? 'selected' : ''; ?>>
+              Area: <?php echo Helper::e($loc['area_name']); ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+
+      <!-- PIC Filter -->
+      <div class="relative hidden lg:block">
+        <select name="pic_id" onchange="this.form.submit()" class="text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-2xl px-3 py-2 sm:py-2.5 shadow-soft-xs focus:outline-none focus:border-purple-500 cursor-pointer">
+          <option value="">-- Semua PIC --</option>
+          <?php foreach ($pics as $pic): ?>
+            <option value="<?php echo $pic['id']; ?>" <?php echo (((int)($_GET['pic_id'] ?? 0)) === (int)$pic['id']) ? 'selected' : ''; ?>>
+              PIC: <?php echo Helper::e($pic['name']); ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
 
       <!-- Search Input -->
       <div class="relative flex-1 min-w-[180px]">
         <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
           <i class="fa-solid fa-magnifying-glass text-xs"></i>
         </span>
-        <input type="text" name="search" value="<?php echo Helper::e($_GET['search'] ?? ''); ?>" placeholder="Cari nama, area, PIC..." class="w-full text-xs pl-8 pr-3 py-2 sm:py-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:outline-none focus:border-purple-500 shadow-soft-xs placeholder:text-slate-400 font-medium">
+        <input type="text" name="search" id="invoiceSearchInput" oninput="debounceSearch(this)" value="<?php echo Helper::e($_GET['search'] ?? ''); ?>" placeholder="Cari nama, area, PIC..." class="w-full text-xs pl-8 pr-3 py-2 sm:py-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 focus:bg-white focus:outline-none focus:border-purple-500 shadow-soft-xs placeholder:text-slate-400 font-medium">
       </div>
 
       <!-- Limit / Per-Page Selector (10, 25, 50, 100, semua) -->
@@ -991,18 +1013,40 @@ function closeImportModal() {
   }, 200);
 }
 
-function toggleFileUploadInv(isDefaultChecked) {
-  const fileContainer = document.getElementById('fileUploadContainerInv');
-  const fileInput = document.getElementById('csv_file_input_inv');
-  if (fileContainer) {
-    if (isDefaultChecked) {
-      fileContainer.classList.add('opacity-50', 'pointer-events-none');
-      if (fileInput) fileInput.required = false;
-    } else {
-      fileContainer.classList.remove('opacity-50', 'pointer-events-none');
-    }
+function toggleFileUploadInv(useDefault) {
+  const container = document.getElementById('fileUploadContainerInv');
+  const input = document.getElementById('csv_file_input_inv');
+  if (useDefault) {
+    container.classList.add('hidden');
+    input.removeAttribute('required');
+  } else {
+    container.classList.remove('hidden');
+    input.setAttribute('required', 'required');
   }
 }
+
+// Real-time Search Logic
+let searchTimeout;
+function debounceSearch(input) {
+  clearTimeout(searchTimeout);
+  sessionStorage.setItem('invoiceWasSearching', 'true');
+  searchTimeout = setTimeout(() => {
+    input.form.submit();
+  }, 600);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (sessionStorage.getItem('invoiceWasSearching') === 'true') {
+    const searchInput = document.getElementById('invoiceSearchInput');
+    if (searchInput) {
+      searchInput.focus();
+      const val = searchInput.value;
+      searchInput.value = '';
+      searchInput.value = val;
+    }
+    sessionStorage.removeItem('invoiceWasSearching');
+  }
+});
 
 function openBillingSettingsModal() {
   const modal = document.getElementById("billingSettingsModal");

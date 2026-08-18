@@ -59,6 +59,16 @@ class AuthService {
         return self::user() !== null;
     }
 
+    public static function isPic(): bool {
+        $user = self::user();
+        return $user && ($user['role_name'] === 'pic');
+    }
+
+    public static function getPicId(): ?int {
+        $user = self::user();
+        return ($user && $user['pic_id']) ? (int)$user['pic_id'] : null;
+    }
+
     public static function hasPermission(string $permission): bool {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();

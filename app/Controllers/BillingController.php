@@ -285,6 +285,11 @@ class BillingController {
         $locationId = (int)($_GET['location_id'] ?? 0);
         $picId = (int)($_GET['pic_id'] ?? 0);
 
+        // RBAC: Force PIC Filter if logged in as PIC
+        if (AuthService::isPic()) {
+            $picId = AuthService::getPicId() ?: -1; // -1 ensures no data if pic_id is missing somehow
+        }
+
         $whereSql = "";
         $params = [];
 

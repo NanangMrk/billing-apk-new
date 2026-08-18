@@ -94,12 +94,35 @@ class AssetController {
             }
         }
 
-        $assets = $pdo->query("
+        // Filter logic
+        $filterStatus = $_GET['status'] ?? '';
+        $searchQuery = $_GET['search'] ?? '';
+
+        $whereClause = "1=1";
+        $params = [];
+
+        if ($filterStatus !== '') {
+            $whereClause .= " AND a.status = ?";
+            $params[] = $filterStatus;
+        }
+
+        if ($searchQuery !== '') {
+            $whereClause .= " AND (a.name LIKE ? OR a.serial_number LIKE ? OR a.asset_no LIKE ?)";
+            $searchLike = "%{$searchQuery}%";
+            $params[] = $searchLike;
+            $params[] = $searchLike;
+            $params[] = $searchLike;
+        }
+
+        $stmt = $pdo->prepare("
             SELECT a.*, c.name as customer_name 
             FROM assets a 
             LEFT JOIN customers c ON a.customer_id = c.id 
+            WHERE $whereClause
             ORDER BY a.id DESC
-        ")->fetchAll();
+        ");
+        $stmt->execute($params);
+        $assets = $stmt->fetchAll();
 
         $pageTitle = 'Manajemen Aset & Alat Kerja Perusahaan';
 

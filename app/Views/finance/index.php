@@ -65,9 +65,12 @@
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="font-bold text-xs text-slate-700 block mb-1">Jenis Transaksi</label>
+            <?php $defaultType = $_GET['type'] ?? 'expense'; ?>
             <select name="type" required class="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500 font-bold" id="typeSelect">
-              <option value="expense">Pengeluaran (Expense)</option>
-              <option value="income">Pemasukan (Income)</option>
+              <option value="expense" <?php echo $defaultType === 'expense' ? 'selected' : ''; ?>>Pengeluaran (Expense)</option>
+              <option value="income" <?php echo $defaultType === 'income' ? 'selected' : ''; ?>>Pemasukan (Income)</option>
+              <option value="debt" <?php echo $defaultType === 'debt' ? 'selected' : ''; ?>>Catat Hutang</option>
+              <option value="receivable" <?php echo $defaultType === 'receivable' ? 'selected' : ''; ?>>Catat Piutang</option>
             </select>
           </div>
 

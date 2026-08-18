@@ -129,25 +129,22 @@ HTML;
             <span class="text-3xs font-bold text-slate-700 group-hover:text-rose-700">Piutang</span>
           </a>
 
+          <?php if (!AuthService::isPic()): ?>
           <a href="<?php echo Helper::url('rab'); ?>" class="flex flex-col items-center p-2.5 rounded-2xl bg-slate-50 hover:bg-purple-50 transition-all text-center group">
             <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-xs mb-1.5 group-hover:scale-110 transition-transform">
               <i class="fa-solid fa-calculator"></i>
             </div>
             <span class="text-3xs font-bold text-slate-700 group-hover:text-amber-700">RAB Proyek</span>
           </a>
+          <?php endif; ?>
         </div>
       </div>
 
+      <?php if (!AuthService::isPic()): ?>
       <!-- Group 3: Keuangan & Laporan -->
       <div>
         <h6 class="text-3xs font-extrabold text-slate-400 uppercase tracking-wider mb-2 px-1">Keuangan & Akuntansi</h6>
         <div class="grid grid-cols-4 gap-2">
-          <a href="<?php echo Helper::url('finance'); ?>" class="flex flex-col items-center p-2.5 rounded-2xl bg-slate-50 hover:bg-purple-50 transition-all text-center group">
-            <div class="w-9 h-9 rounded-xl bg-cyan-100 text-cyan-700 flex items-center justify-center text-xs mb-1.5 group-hover:scale-110 transition-transform">
-              <i class="fa-solid fa-wallet"></i>
-            </div>
-            <span class="text-3xs font-bold text-slate-700 group-hover:text-cyan-700">Kas & Bank</span>
-          </a>
 
           <a href="<?php echo Helper::url('transactions'); ?>" class="flex flex-col items-center p-2.5 rounded-2xl bg-slate-50 hover:bg-purple-50 transition-all text-center group">
             <div class="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center text-xs mb-1.5 group-hover:scale-110 transition-transform">
@@ -163,12 +160,7 @@ HTML;
             <span class="text-3xs font-bold text-slate-700 group-hover:text-emerald-700">Arus Kas</span>
           </a>
 
-          <a href="<?php echo Helper::url('profit_loss'); ?>" class="flex flex-col items-center p-2.5 rounded-2xl bg-slate-50 hover:bg-purple-50 transition-all text-center group">
-            <div class="w-9 h-9 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center text-xs mb-1.5 group-hover:scale-110 transition-transform">
-              <i class="fa-solid fa-chart-line"></i>
-            </div>
-            <span class="text-3xs font-bold text-slate-700 group-hover:text-violet-700">Laba Rugi</span>
-          </a>
+
         </div>
       </div>
 
@@ -205,6 +197,7 @@ HTML;
           </a>
         </div>
       </div>
+      <?php endif; ?>
 
       <!-- Logout CTA -->
       <div class="pt-2 border-t border-slate-100">

@@ -65,17 +65,17 @@ HTML;
         <?php echo navItem('payments', 'Riwayat Bayar', 'fa-receipt', $currentPage); ?>
         <?php echo navItem('receivables', 'Aging Piutang', 'fa-clock-rotate-left', $currentPage); ?>
 
+        <?php if (!AuthService::isPic()): ?>
         <!-- Operations -->
         <?php echo navHeader('Operasional'); ?>
         <?php echo navItem('rab', 'RAB Proyek', 'fa-calculator', $currentPage); ?>
 
         <!-- Finance -->
         <?php echo navHeader('Keuangan'); ?>
-        <?php echo navItem('finance', 'Kas & Bank', 'fa-wallet', $currentPage); ?>
         <?php echo navItem('transactions', 'Transaksi Kas', 'fa-money-bill-transfer', $currentPage); ?>
         <?php echo navItem('cashflow', 'Arus Kas (Cashflow)', 'fa-arrow-trend-up', $currentPage); ?>
         <?php echo navItem('payroll', 'Payroll & Gaji', 'fa-money-check-dollar', $currentPage); ?>
-        <?php echo navItem('profit_loss', 'Laporan Laba Rugi', 'fa-chart-line', $currentPage); ?>
+
 
         <!-- Inventory & Assets -->
         <?php echo navHeader('Logistik & Aset'); ?>
@@ -94,6 +94,7 @@ HTML;
         <?php echo navItem('settings_company', 'Profil Perusahaan', 'fa-building', $currentPage); ?>
         <?php echo navItem('settings_users', 'Pengguna & Role', 'fa-user-shield', $currentPage); ?>
         <?php echo navItem('settings_logs', 'Audit & Activity Log', 'fa-shield-halved', $currentPage); ?>
+        <?php endif; ?>
       </ul>
     </div>
   </div>

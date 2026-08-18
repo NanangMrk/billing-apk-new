@@ -38,6 +38,35 @@
     </div>
   </div>
 
+  <!-- Filter Menu -->
+  <form method="GET" action="" class="flex flex-col sm:flex-row gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+    <input type="hidden" name="page" value="assets">
+    <div class="flex-[2]">
+      <label class="text-3xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Pencarian Aset</label>
+      <input type="text" name="search" value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>" placeholder="Cari nama aset, SN, atau No Aset..." class="w-full text-xs px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500">
+    </div>
+    <div class="flex-1">
+      <label class="text-3xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Status Aset</label>
+      <select name="status" class="w-full text-xs px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500 bg-white">
+        <option value="">Semua Status</option>
+        <option value="available" <?php echo (isset($_GET['status']) && $_GET['status'] === 'available') ? 'selected' : ''; ?>>Tersedia di Gudang</option>
+        <option value="in_use" <?php echo (isset($_GET['status']) && $_GET['status'] === 'in_use') ? 'selected' : ''; ?>>Sedang Digunakan</option>
+        <option value="assigned_customer" <?php echo (isset($_GET['status']) && $_GET['status'] === 'assigned_customer') ? 'selected' : ''; ?>>Dipinjamkan Pelanggan</option>
+        <option value="maintenance" <?php echo (isset($_GET['status']) && $_GET['status'] === 'maintenance') ? 'selected' : ''; ?>>Perbaikan / Servis</option>
+        <option value="damaged" <?php echo (isset($_GET['status']) && $_GET['status'] === 'damaged') ? 'selected' : ''; ?>>Rusak Fisik</option>
+        <option value="lost" <?php echo (isset($_GET['status']) && $_GET['status'] === 'lost') ? 'selected' : ''; ?>>Hilang</option>
+      </select>
+    </div>
+    <div class="flex items-end gap-2">
+      <button type="submit" class="px-5 py-2.5 text-xs font-bold text-white bg-slate-800 rounded-xl shadow-soft-sm hover:bg-slate-900 transition-colors">
+        Terapkan Filter
+      </button>
+      <a href="?page=assets" class="px-5 py-2.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-xl shadow-soft-sm hover:bg-slate-50 transition-colors">
+        Reset
+      </a>
+    </div>
+  </form>
+
   <!-- Assets Table -->
   <div class="overflow-x-auto">
     <table class="w-full text-xs text-left">

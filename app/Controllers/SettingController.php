@@ -17,30 +17,83 @@ class SettingController {
                 Helper::redirect('settings_company');
             }
 
-            $companyName = trim($_POST['company_name'] ?? '');
-            $brandName = trim($_POST['brand_name'] ?? '');
-            $address = trim($_POST['address'] ?? '');
-            $phone = trim($_POST['phone'] ?? '');
-            $whatsapp = trim($_POST['whatsapp'] ?? '');
-            $email = trim($_POST['email'] ?? '');
-            $bankInfo = trim($_POST['bank_account_info'] ?? '');
-            $footer = trim($_POST['invoice_footer'] ?? '');
+            $action = $_POST['action'] ?? 'update_profile';
 
-            $stmt = $pdo->prepare("
-                UPDATE company_profile 
-                SET company_name = ?, brand_name = ?, address = ?, phone = ?, whatsapp = ?, email = ?, bank_account_info = ?, invoice_footer = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE id = 1
-            ");
-            $stmt->execute([$companyName, $brandName, $address, $phone, $whatsapp, $email, $bankInfo, $footer]);
+            if ($action === 'save_account') {
+                $name = trim($_POST['account_name'] ?? '');
+                $type = trim($_POST['account_type'] ?? 'bank');
+                $bank = trim($_POST['bank_name'] ?? '');
+                $accNo = trim($_POST['account_number'] ?? '');
+                $balance = (int)str_replace(['.', ',', ' '], '', $_POST['opening_balance'] ?? '0');
 
-            Helper::logActivity('SETTINGS', 'UPDATE_COMPANY', '1', null, 'Updated company profile');
-            Helper::setFlash('success', 'Profil perusahaan berhasil diperbarui.');
-            Helper::redirect('settings_company');
+                if (!empty($name)) {
+                    $stmt = $pdo->prepare("INSERT INTO finance_accounts (account_name, account_type, bank_name, account_number, opening_balance, current_balance) VALUES (?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([$name, $type, $bank, $accNo, $balance, $balance]);
+                    Helper::logActivity('SETTINGS', 'CREATE_ACCOUNT', $pdo->lastInsertId(), null, "Created account $name");
+                    Helper::setFlash('success', 'Rekening baru berhasil ditambahkan.');
+                }
+                Helper::redirect('settings_company');
+            }
+
+            if ($action === 'update_account') {
+                $id = (int)($_POST['id'] ?? 0);
+                $name = trim($_POST['account_name'] ?? '');
+                $type = trim($_POST['account_type'] ?? 'bank');
+                $bank = trim($_POST['bank_name'] ?? '');
+                $accNo = trim($_POST['account_number'] ?? '');
+
+                if ($id > 0 && !empty($name)) {
+                    $stmt = $pdo->prepare("UPDATE finance_accounts SET account_name = ?, account_type = ?, bank_name = ?, account_number = ? WHERE id = ?");
+                    $stmt->execute([$name, $type, $bank, $accNo, $id]);
+                    Helper::logActivity('SETTINGS', 'UPDATE_ACCOUNT', (string)$id, null, "Updated account $name");
+                    Helper::setFlash('success', 'Rekening berhasil diperbarui.');
+                }
+                Helper::redirect('settings_company');
+            }
+
+            if ($action === 'delete_account') {
+                $id = (int)($_POST['id'] ?? 0);
+                if ($id > 0) {
+                    // Check if used in transactions
+                    $used = $pdo->query("SELECT COUNT(*) FROM finance_transactions WHERE account_id = $id")->fetchColumn();
+                    if ($used > 0) {
+                        Helper::setFlash('error', 'Rekening tidak bisa dihapus karena sudah ada transaksi.');
+                    } else {
+                        $pdo->prepare("DELETE FROM finance_accounts WHERE id = ?")->execute([$id]);
+                        Helper::logActivity('SETTINGS', 'DELETE_ACCOUNT', (string)$id, null, "Deleted account #$id");
+                        Helper::setFlash('success', 'Rekening berhasil dihapus.');
+                    }
+                }
+                Helper::redirect('settings_company');
+            }
+
+            if ($action === 'update_profile') {
+                $companyName = trim($_POST['company_name'] ?? '');
+                $brandName = trim($_POST['brand_name'] ?? '');
+                $address = trim($_POST['address'] ?? '');
+                $phone = trim($_POST['phone'] ?? '');
+                $whatsapp = trim($_POST['whatsapp'] ?? '');
+                $email = trim($_POST['email'] ?? '');
+                $bankInfo = trim($_POST['bank_account_info'] ?? '');
+                $footer = trim($_POST['invoice_footer'] ?? '');
+
+                $stmt = $pdo->prepare("
+                    UPDATE company_profile 
+                    SET company_name = ?, brand_name = ?, address = ?, phone = ?, whatsapp = ?, email = ?, bank_account_info = ?, invoice_footer = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = 1
+                ");
+                $stmt->execute([$companyName, $brandName, $address, $phone, $whatsapp, $email, $bankInfo, $footer]);
+
+                Helper::logActivity('SETTINGS', 'UPDATE_COMPANY', '1', null, 'Updated company profile');
+                Helper::setFlash('success', 'Profil perusahaan berhasil diperbarui.');
+                Helper::redirect('settings_company');
+            }
         }
 
         $company = $pdo->query("SELECT * FROM company_profile LIMIT 1")->fetch();
+        $accounts = $pdo->query("SELECT * FROM finance_accounts ORDER BY id ASC")->fetchAll();
 
-        $pageTitle = 'Profil Perusahaan & Template';
+        $pageTitle = 'Profil Perusahaan & Rekening';
 
         ob_start();
         require __DIR__ . '/../Views/settings/company.php';

@@ -16,6 +16,34 @@
     </button>
   </div>
 
+  <!-- Filter Menu -->
+  <form method="GET" action="" class="flex flex-col sm:flex-row gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+    <input type="hidden" name="page" value="goods_out">
+    <div class="flex-1">
+      <label class="text-3xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Bulan Transaksi</label>
+      <input type="month" name="month" value="<?php echo htmlspecialchars($_GET['month'] ?? date('Y-m')); ?>" class="w-full text-xs px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500">
+    </div>
+    <div class="flex-[2]">
+      <label class="text-3xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Item Barang</label>
+      <select name="item_id" class="w-full text-xs px-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500 bg-white">
+        <option value="">Semua Barang</option>
+        <?php foreach ($items as $it): ?>
+          <option value="<?php echo $it['id']; ?>" <?php echo (isset($_GET['item_id']) && $_GET['item_id'] == $it['id']) ? 'selected' : ''; ?>>
+            <?php echo Helper::e($it['name']); ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+    </div>
+    <div class="flex items-end gap-2">
+      <button type="submit" class="px-5 py-2.5 text-xs font-bold text-white bg-slate-800 rounded-xl shadow-soft-sm hover:bg-slate-900 transition-colors">
+        Terapkan Filter
+      </button>
+      <a href="?page=goods_out" class="px-5 py-2.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-xl shadow-soft-sm hover:bg-slate-50 transition-colors">
+        Reset
+      </a>
+    </div>
+  </form>
+
   <!-- Goods Out History Table -->
   <div class="overflow-x-auto">
     <table class="w-full text-xs text-left">

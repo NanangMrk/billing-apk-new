@@ -507,14 +507,35 @@ class CustomerController {
                 $notes = trim($_POST['notes'] ?? '');
 
                 if (!empty($name) && !empty($phone)) {
-                    $stmt = $pdo->prepare("
-                        INSERT INTO customer_pics (name, phone, position, company, notes)
-                        VALUES (?, ?, ?, ?, ?)
-                    ");
-                    $stmt->execute([$name, $phone, $position, $company, $notes]);
+                    $pdo->beginTransaction();
+                    try {
+                        $stmt = $pdo->prepare("
+                            INSERT INTO customer_pics (name, phone, position, company, notes)
+                            VALUES (?, ?, ?, ?, ?)
+                        ");
+                        $stmt->execute([$name, $phone, $position, $company, $notes]);
+                        $picId = $pdo->lastInsertId();
 
-                    Helper::logActivity('PIC', 'CREATE', $name, null, "Created PIC: $name");
-                    Helper::setFlash('success', "PIC $name berhasil disimpan.");
+                        $username = trim($_POST['username'] ?? '');
+                        $password = trim($_POST['password'] ?? '');
+
+                        if (!empty($username) && !empty($password)) {
+                            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                            $email = 'pic_' . $picId . '_' . time() . '@isp.local'; // dummy unique email
+                            $userStmt = $pdo->prepare("
+                                INSERT INTO users (role_id, name, username, email, password, pic_id) 
+                                VALUES (?, ?, ?, ?, ?, ?)
+                            ");
+                            $userStmt->execute([8, $name, $username, $email, $hashedPassword, $picId]);
+                        }
+
+                        $pdo->commit();
+                        Helper::logActivity('PIC', 'CREATE', $name, null, "Created PIC: $name");
+                        Helper::setFlash('success', "PIC $name berhasil disimpan.");
+                    } catch (Exception $e) {
+                        $pdo->rollBack();
+                        Helper::setFlash('error', "Gagal menyimpan PIC: " . $e->getMessage());
+                    }
                 }
                 Helper::redirect('pics');
             }
@@ -534,15 +555,60 @@ class CustomerController {
                 $notes = trim($_POST['notes'] ?? '');
 
                 if ($id > 0 && !empty($name) && !empty($phone)) {
-                    $stmt = $pdo->prepare("
-                        UPDATE customer_pics 
-                        SET name = ?, phone = ?, position = ?, company = ?, notes = ?
-                        WHERE id = ?
-                    ");
-                    $stmt->execute([$name, $phone, $position, $company, $notes, $id]);
+                    $pdo->beginTransaction();
+                    try {
+                        $stmt = $pdo->prepare("
+                            UPDATE customer_pics 
+                            SET name = ?, phone = ?, position = ?, company = ?, notes = ?
+                            WHERE id = ?
+                        ");
+                        $stmt->execute([$name, $phone, $position, $company, $notes, $id]);
 
-                    Helper::logActivity('PIC', 'UPDATE', (string)$id, null, "Updated PIC #$id: $name");
-                    Helper::setFlash('success', "PIC $name berhasil diperbarui.");
+                        $username = trim($_POST['username'] ?? '');
+                        $password = trim($_POST['password'] ?? '');
+
+                        // Handle User Account for PIC
+                        $checkUserStmt = $pdo->prepare("SELECT id FROM users WHERE pic_id = ? LIMIT 1");
+                        $checkUserStmt->execute([$id]);
+                        $userId = $checkUserStmt->fetchColumn();
+
+                        if ($userId) {
+                            // User exists, update it
+                            if (empty($username)) {
+                                // If username is emptied, we delete the user account entirely (revoke access)
+                                $delUser = $pdo->prepare("DELETE FROM users WHERE id = ?");
+                                $delUser->execute([$userId]);
+                            } else {
+                                // Update username and maybe password
+                                if (!empty($password)) {
+                                    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                                    $updUser = $pdo->prepare("UPDATE users SET name = ?, username = ?, password = ? WHERE id = ?");
+                                    $updUser->execute([$name, $username, $hashedPassword, $userId]);
+                                } else {
+                                    $updUser = $pdo->prepare("UPDATE users SET name = ?, username = ? WHERE id = ?");
+                                    $updUser->execute([$name, $username, $userId]);
+                                }
+                            }
+                        } else {
+                            // User doesn't exist, create if username is provided
+                            if (!empty($username) && !empty($password)) {
+                                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                                $email = 'pic_' . $id . '_' . time() . '@isp.local'; // dummy unique email
+                                $userStmt = $pdo->prepare("
+                                    INSERT INTO users (role_id, name, username, email, password, pic_id) 
+                                    VALUES (?, ?, ?, ?, ?, ?)
+                                ");
+                                $userStmt->execute([8, $name, $username, $email, $hashedPassword, $id]);
+                            }
+                        }
+
+                        $pdo->commit();
+                        Helper::logActivity('PIC', 'UPDATE', (string)$id, null, "Updated PIC #$id: $name");
+                        Helper::setFlash('success', "PIC $name berhasil diperbarui.");
+                    } catch (Exception $e) {
+                        $pdo->rollBack();
+                        Helper::setFlash('error', "Gagal memperbarui PIC: " . $e->getMessage());
+                    }
                 }
                 Helper::redirect('pics');
             }
@@ -579,9 +645,10 @@ class CustomerController {
         }
 
         $pics = $pdo->query("
-            SELECT p.*, COUNT(c.id) as total_customers 
+            SELECT p.*, COUNT(c.id) as total_customers, u.username
             FROM customer_pics p 
             LEFT JOIN customers c ON p.id = c.pic_id 
+            LEFT JOIN users u ON p.id = u.pic_id
             GROUP BY p.id
             ORDER BY p.name ASC
         ")->fetchAll();

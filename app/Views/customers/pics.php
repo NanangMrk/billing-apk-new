@@ -142,6 +142,21 @@
         </div>
       </div>
 
+      <div class="p-3 bg-purple-50 rounded-2xl border border-purple-100 space-y-3">
+        <h6 class="font-bold text-xs text-purple-800">Akses Portal PIC (Opsional)</h6>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-bold text-xs text-slate-700 block mb-1">Username Login</label>
+            <input type="text" name="username" placeholder="contoh: hendra_rw04" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500">
+          </div>
+          <div>
+            <label class="font-bold text-xs text-slate-700 block mb-1">Password</label>
+            <input type="password" name="password" placeholder="Minimal 6 karakter" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500">
+          </div>
+        </div>
+        <p class="text-3xs text-purple-600">Isi username dan password jika PIC ini diizinkan login untuk melihat tagihan warganya.</p>
+      </div>
+
       <div>
         <label class="font-bold text-xs text-slate-700 block mb-1">Catatan</label>
         <textarea name="notes" rows="2" placeholder="Catatan koordinator..." class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500"></textarea>
@@ -203,6 +218,21 @@
           <label class="font-bold text-xs text-slate-700 block mb-1">Entitas / RW / Instansi</label>
           <input type="text" name="company" id="edit_pic_company" placeholder="RT 04 RW 12 Galaxy" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500">
         </div>
+      </div>
+
+      <div class="p-3 bg-blue-50 rounded-2xl border border-blue-100 space-y-3">
+        <h6 class="font-bold text-xs text-blue-800">Akses Portal PIC</h6>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="font-bold text-xs text-slate-700 block mb-1">Username Login</label>
+            <input type="text" name="username" id="edit_pic_username" placeholder="contoh: hendra_rw04" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500">
+          </div>
+          <div>
+            <label class="font-bold text-xs text-slate-700 block mb-1">Password Baru</label>
+            <input type="password" name="password" placeholder="(Kosongkan jika tidak diubah)" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500">
+          </div>
+        </div>
+        <p class="text-3xs text-blue-600">Kosongkan username jika PIC tidak diizinkan untuk login.</p>
       </div>
 
       <div>
@@ -272,6 +302,7 @@ function openEditPicModal(pic) {
   document.getElementById('edit_pic_position').value = pic.position || '';
   document.getElementById('edit_pic_company').value = pic.company || '';
   document.getElementById('edit_pic_notes').value = pic.notes || '';
+  document.getElementById('edit_pic_username').value = pic.username || '';
 
   openModal('editPicModal', 'editPicModalContent');
 }
