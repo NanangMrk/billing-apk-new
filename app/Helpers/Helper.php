@@ -29,6 +29,14 @@ class Helper {
         return self::baseUrl() . '/public/assets/' . ltrim($path, '/');
     }
 
+    public static function uploadUrl(?string $path): string {
+        if (empty($path)) return '';
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+        return self::baseUrl() . '/public/' . ltrim($path, '/');
+    }
+
     public static function redirect(string $page, array $params = []): void {
         header("Location: " . self::url($page, $params));
         exit;

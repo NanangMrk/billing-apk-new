@@ -39,5 +39,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# Uploads Runtime Data
+public/uploads/*
+!public/uploads/.gitkeep
+
 # Composer Vendor (if added in the future)
 /vendor/

@@ -52,6 +52,8 @@
           <th class="py-3 px-4 font-bold">No. Bukti & Nama Item</th>
           <th class="py-3 px-4 font-bold text-center">Jumlah Keluar</th>
           <th class="py-3 px-4 font-bold">Tujuan Distribusi</th>
+          <th class="py-3 px-4 font-bold">Pengeluar / Penerima</th>
+          <th class="py-3 px-4 font-bold text-center">Foto Bukti</th>
           <th class="py-3 px-4 font-bold">Catatan Penggunaan</th>
           <th class="py-3 px-4 font-bold text-center">Tanggal Transaksi</th>
           <th class="py-3 px-4 font-bold text-center">Aksi</th>
@@ -60,7 +62,7 @@
       <tbody class="divide-y divide-slate-100">
         <?php if (empty($history)): ?>
         <tr>
-          <td colspan="6" class="py-12 text-center text-slate-400">
+          <td colspan="8" class="py-12 text-center text-slate-400">
             <i class="fa-solid fa-truck-ramp-box text-3xl mb-2 block text-slate-300"></i>
             Belum ada data barang keluar yang tercatat
           </td>
@@ -107,6 +109,26 @@
               <span class="px-2.5 py-0.5 rounded-full text-3xs font-extrabold border <?php echo $cls; ?> uppercase">
                 <?php echo $lbl; ?>
               </span>
+            </td>
+
+            <td class="py-3.5 px-4 whitespace-nowrap text-xs">
+              <div class="flex items-center gap-1.5 text-slate-800 font-medium">
+                <i class="fa-solid fa-user-tag text-slate-400 text-2xs"></i>
+                <span><?php echo Helper::e(!empty($h['recipient_name']) ? $h['recipient_name'] : ($h['creator_name'] ?? '-')); ?></span>
+              </div>
+            </td>
+
+            <td class="py-3.5 px-4 text-center whitespace-nowrap">
+              <?php if (!empty($h['photo'])): ?>
+                <button type="button" onclick="previewImage('<?php echo Helper::uploadUrl($h['photo']); ?>', '<?php echo Helper::e(addslashes($h['transaction_no'])); ?>')" class="group relative inline-block overflow-hidden rounded-xl border border-slate-200 shadow-soft-xs hover:border-orange-400 transition-all">
+                  <img src="<?php echo Helper::uploadUrl($h['photo']); ?>" alt="Foto Bukti" class="w-9 h-9 object-cover rounded-xl group-hover:scale-110 transition-transform duration-200">
+                  <div class="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-xl">
+                    <i class="fa-solid fa-magnifying-glass-plus text-white text-xs"></i>
+                  </div>
+                </button>
+              <?php else: ?>
+                <span class="text-3xs text-slate-300 italic">Tanpa Foto</span>
+              <?php endif; ?>
             </td>
 
             <td class="py-3.5 px-4 text-xs text-slate-600 max-w-xs truncate">
@@ -165,7 +187,7 @@
       </button>
     </div>
 
-    <form method="POST" action="<?php echo Helper::url('goods_out'); ?>" class="space-y-4">
+    <form method="POST" action="<?php echo Helper::url('goods_out'); ?>" enctype="multipart/form-data" class="space-y-4">
       <?php echo Helper::csrfField(); ?>
       <input type="hidden" name="action" value="save_goods_out">
 
@@ -194,6 +216,24 @@
             <option value="project">Proyek RAB / Backbone</option>
             <option value="damaged">Rusak / Afkir</option>
           </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="font-bold text-xs text-slate-700 block mb-1">Nama Orang yang Mengeluarkan / Penerima</label>
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+            <i class="fa-solid fa-user-circle text-xs"></i>
+          </span>
+          <input type="text" name="recipient_name" placeholder="contoh: Teknisi Budi / Bpk. Agus" class="w-full text-xs pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-orange-500">
+        </div>
+      </div>
+
+      <div>
+        <label class="font-bold text-xs text-slate-700 block mb-1">Foto Bukti Pengeluaran Barang</label>
+        <input type="file" name="photo" accept="image/*" class="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer border border-slate-200 rounded-xl bg-white" onchange="handleImagePreview(this, 'add_photo_preview_img')">
+        <div id="add_photo_preview_box" class="mt-2.5 hidden">
+          <img id="add_photo_preview_img" src="" alt="Preview Foto" class="w-24 h-24 object-cover rounded-2xl border border-slate-200 shadow-soft-sm">
         </div>
       </div>
 
@@ -234,7 +274,7 @@
       </button>
     </div>
 
-    <form method="POST" action="<?php echo Helper::url('goods_out'); ?>" class="space-y-4">
+    <form method="POST" action="<?php echo Helper::url('goods_out'); ?>" enctype="multipart/form-data" class="space-y-4">
       <?php echo Helper::csrfField(); ?>
       <input type="hidden" name="action" value="update_goods_out">
       <input type="hidden" name="id" id="edit_gout_id">
@@ -267,6 +307,25 @@
       </div>
 
       <div>
+        <label class="font-bold text-xs text-slate-700 block mb-1">Nama Orang yang Mengeluarkan / Penerima</label>
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+            <i class="fa-solid fa-user-circle text-xs"></i>
+          </span>
+          <input type="text" name="recipient_name" id="edit_gout_recipient_name" placeholder="contoh: Teknisi Budi / Bpk. Agus" class="w-full text-xs pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500">
+        </div>
+      </div>
+
+      <div>
+        <label class="font-bold text-xs text-slate-700 block mb-1">Foto Bukti Pengeluaran Barang</label>
+        <input type="file" name="photo" accept="image/*" class="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-200 rounded-xl bg-white" onchange="handleImagePreview(this, 'edit_photo_preview_img')">
+        <div id="edit_photo_preview_box" class="mt-2.5 flex items-center gap-3">
+          <img id="edit_photo_preview_img" src="" alt="Preview Foto" class="w-20 h-20 object-cover rounded-2xl border border-slate-200 shadow-soft-sm hidden">
+          <span id="edit_photo_hint" class="text-3xs text-slate-400 italic">Upload foto baru jika ingin mengganti foto sebelumnya.</span>
+        </div>
+      </div>
+
+      <div>
         <label class="font-bold text-xs text-slate-700 block mb-1">Catatan Penggunaan</label>
         <textarea name="notes" id="edit_gout_notes" rows="2" placeholder="contoh: Dipasang di rumah pelanggan Bpk. Anugrah / penarikan kabel ODP..." class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500"></textarea>
       </div>
@@ -290,6 +349,21 @@
   <input type="hidden" name="action" value="delete_goods_out">
   <input type="hidden" name="id" id="deleteGoodsOutId">
 </form>
+
+<!-- Modal Lightbox Photo Preview -->
+<div id="photoLightboxModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md transition-opacity duration-300">
+  <div class="relative max-w-2xl w-full bg-white rounded-3xl p-4 shadow-soft-2xl border border-slate-100 text-center space-y-3 transform transition-all duration-300 scale-95 opacity-0" id="photoLightboxModalContent">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-2.5 px-2">
+      <span id="lightboxTitle" class="font-bold text-xs text-slate-800">Foto Bukti Transaksi</span>
+      <button type="button" onclick="closePhotoLightbox()" class="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-colors">
+        <i class="fa-solid fa-xmark text-base"></i>
+      </button>
+    </div>
+    <div class="overflow-hidden rounded-2xl max-h-[70vh] flex items-center justify-center bg-slate-950/90 p-2">
+      <img id="lightboxImg" src="" alt="Bukti Foto" class="max-h-[65vh] max-w-full object-contain rounded-xl shadow-lg">
+    </div>
+  </div>
+</div>
 
 <!-- Modal Control Script -->
 <script>
@@ -325,6 +399,23 @@ function closeGoodsOutModal() {
   closeModal('goodsOutModal', 'goodsOutModalContent');
 }
 
+function handleImagePreview(input, targetImgId) {
+  const file = input.files[0];
+  const targetImg = document.getElementById(targetImgId);
+  if (!targetImg) return;
+  const parentBox = targetImg.parentElement;
+
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      targetImg.src = e.target.result;
+      targetImg.classList.remove('hidden');
+      if (parentBox) parentBox.classList.remove('hidden');
+    }
+    reader.readAsDataURL(file);
+  }
+}
+
 function openEditGoodsOutModal(trx) {
   if (!trx) return;
 
@@ -333,12 +424,34 @@ function openEditGoodsOutModal(trx) {
   document.getElementById('edit_gout_quantity').value = trx.quantity || 1;
   document.getElementById('edit_gout_destination_type').value = trx.destination_type || 'customer';
   document.getElementById('edit_gout_notes').value = trx.notes || '';
+  document.getElementById('edit_gout_recipient_name').value = trx.recipient_name || '';
+
+  const editImgEl = document.getElementById('edit_photo_preview_img');
+  if (trx.photo && editImgEl) {
+    editImgEl.src = '<?php echo Helper::uploadUrl(''); ?>' + trx.photo;
+    editImgEl.classList.remove('hidden');
+  } else if (editImgEl) {
+    editImgEl.src = '';
+    editImgEl.classList.add('hidden');
+  }
 
   openModal('editGoodsOutModal', 'editGoodsOutModalContent');
 }
 
 function closeEditGoodsOutModal() {
   closeModal('editGoodsOutModal', 'editGoodsOutModalContent');
+}
+
+function previewImage(url, title) {
+  const img = document.getElementById('lightboxImg');
+  const titleEl = document.getElementById('lightboxTitle');
+  if (img) img.src = url;
+  if (titleEl) titleEl.innerText = 'Foto Bukti Transaksi ' + title;
+  openModal('photoLightboxModal', 'photoLightboxModalContent');
+}
+
+function closePhotoLightbox() {
+  closeModal('photoLightboxModal', 'photoLightboxModalContent');
 }
 
 function confirmDeleteGoodsOut(id, trxNo, qty, itemName) {
@@ -352,7 +465,8 @@ function confirmDeleteGoodsOut(id, trxNo, qty, itemName) {
 document.addEventListener("DOMContentLoaded", function() {
   const modals = [
     { id: 'goodsOutModal', content: 'goodsOutModalContent' },
-    { id: 'editGoodsOutModal', content: 'editGoodsOutModalContent' }
+    { id: 'editGoodsOutModal', content: 'editGoodsOutModalContent' },
+    { id: 'photoLightboxModal', content: 'photoLightboxModalContent' }
   ];
 
   modals.forEach(m => {

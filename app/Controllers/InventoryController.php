@@ -279,6 +279,10 @@ class InventoryController {
         AuthMiddleware::handle('inventory.manage');
         $pdo = getDbConnection();
 
+        // Ensure columns exist in database
+        try { $pdo->exec("ALTER TABLE inventory_transactions ADD COLUMN recipient_name TEXT"); } catch (\PDOException $e) {}
+        try { $pdo->exec("ALTER TABLE inventory_transactions ADD COLUMN photo TEXT"); } catch (\PDOException $e) {}
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!Helper::verifyCsrf()) {
                 Helper::setFlash('error', 'Token CSRF tidak valid.');
@@ -293,6 +297,23 @@ class InventoryController {
                 $quantity = (int)($_POST['quantity'] ?? 0);
                 $destType = trim($_POST['destination_type'] ?? 'customer');
                 $notes = trim($_POST['notes'] ?? '');
+                $recipientName = trim($_POST['recipient_name'] ?? '');
+
+                // Photo upload
+                $photoPath = null;
+                if (!empty($_FILES['photo']['tmp_name']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+                    $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+                    $ftype = mime_content_type($_FILES['photo']['tmp_name']);
+                    if (in_array($ftype, $allowedTypes) && $_FILES['photo']['size'] <= 5 * 1024 * 1024) {
+                        $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
+                        $filename = 'gout_' . date('YmdHis') . '_' . bin2hex(random_bytes(4)) . '.' . strtolower($ext);
+                        $uploadDir = __DIR__ . '/../../public/uploads/inventory/';
+                        if (!is_dir($uploadDir)) { mkdir($uploadDir, 0755, true); }
+                        if (move_uploaded_file($_FILES['photo']['tmp_name'], $uploadDir . $filename)) {
+                            $photoPath = 'uploads/inventory/' . $filename;
+                        }
+                    }
+                }
 
                 if ($itemId > 0 && $quantity > 0) {
                     $item = $pdo->query("SELECT * FROM inventory_items WHERE id = {$itemId}")->fetch();
@@ -304,10 +325,10 @@ class InventoryController {
                         $userId = AuthService::user()['id'] ?? null;
 
                         $stmt = $pdo->prepare("
-                            INSERT INTO inventory_transactions (transaction_no, transaction_date, type, item_id, quantity, unit_price, destination_type, notes, created_by)
-                            VALUES (?, CURRENT_DATE, 'out', ?, ?, ?, ?, ?, ?)
+                            INSERT INTO inventory_transactions (transaction_no, transaction_date, type, item_id, quantity, unit_price, destination_type, notes, recipient_name, photo, created_by)
+                            VALUES (?, CURRENT_DATE, 'out', ?, ?, ?, ?, ?, ?, ?, ?)
                         ");
-                        $stmt->execute([$trxNo, $itemId, $quantity, $item['purchase_price'], $destType, $notes, $userId]);
+                        $stmt->execute([$trxNo, $itemId, $quantity, $item['purchase_price'], $destType, $notes, $recipientName, $photoPath, $userId]);
 
                         // Reduce stock
                         $stmtUpd = $pdo->prepare("UPDATE inventory_items SET current_stock = current_stock - ? WHERE id = ?");
@@ -331,6 +352,7 @@ class InventoryController {
                 $quantity = (int)($_POST['quantity'] ?? 0);
                 $destType = trim($_POST['destination_type'] ?? 'customer');
                 $notes = trim($_POST['notes'] ?? '');
+                $recipientName = trim($_POST['recipient_name'] ?? '');
 
                 if ($id > 0 && $itemId > 0 && $quantity > 0) {
                     $oldTrx = $pdo->query("SELECT * FROM inventory_transactions WHERE id = {$id} AND type = 'out'")->fetch();
@@ -348,12 +370,32 @@ class InventoryController {
                             $pdo->prepare("UPDATE inventory_items SET current_stock = current_stock - ? WHERE id = ?")
                                 ->execute([$quantity, $itemId]);
 
+                            // Handle photo update
+                            $photoPath = $oldTrx['photo'] ?? null;
+                            if (!empty($_FILES['photo']['tmp_name']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+                                $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+                                $ftype = mime_content_type($_FILES['photo']['tmp_name']);
+                                if (in_array($ftype, $allowedTypes) && $_FILES['photo']['size'] <= 5 * 1024 * 1024) {
+                                    $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
+                                    $filename = 'gout_' . date('YmdHis') . '_' . bin2hex(random_bytes(4)) . '.' . strtolower($ext);
+                                    $uploadDir = __DIR__ . '/../../public/uploads/inventory/';
+                                    if (!is_dir($uploadDir)) { mkdir($uploadDir, 0755, true); }
+                                    if (move_uploaded_file($_FILES['photo']['tmp_name'], $uploadDir . $filename)) {
+                                        if (!empty($oldTrx['photo'])) {
+                                            $oldFile = __DIR__ . '/../../public/' . $oldTrx['photo'];
+                                            if (file_exists($oldFile)) { @unlink($oldFile); }
+                                        }
+                                        $photoPath = 'uploads/inventory/' . $filename;
+                                    }
+                                }
+                            }
+
                             $stmt = $pdo->prepare("
                                 UPDATE inventory_transactions 
-                                SET item_id = ?, quantity = ?, destination_type = ?, notes = ?
+                                SET item_id = ?, quantity = ?, destination_type = ?, notes = ?, recipient_name = ?, photo = ?
                                 WHERE id = ?
                             ");
-                            $stmt->execute([$itemId, $quantity, $destType, $notes, $id]);
+                            $stmt->execute([$itemId, $quantity, $destType, $notes, $recipientName, $photoPath, $id]);
 
                             $pdo->commit();
 
@@ -379,6 +421,12 @@ class InventoryController {
                         // Restore deducted stock
                         $pdo->prepare("UPDATE inventory_items SET current_stock = current_stock + ? WHERE id = ?")
                             ->execute([(int)$trx['quantity'], (int)$trx['item_id']]);
+
+                        // Delete physical photo file if present
+                        if (!empty($trx['photo'])) {
+                            $oldFile = __DIR__ . '/../../public/' . $trx['photo'];
+                            if (file_exists($oldFile)) { @unlink($oldFile); }
+                        }
 
                         $pdo->prepare("DELETE FROM inventory_transactions WHERE id = ?")->execute([$id]);
 

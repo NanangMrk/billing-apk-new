@@ -404,6 +404,8 @@ CREATE TABLE IF NOT EXISTS inventory_transactions (
     customer_id INTEGER,
     reference_no TEXT,
     notes TEXT,
+    recipient_name TEXT,
+    photo TEXT,
     created_by INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (item_id) REFERENCES inventory_items(id),
