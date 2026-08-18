@@ -137,6 +137,18 @@ switch ($page) {
     case 'assets':
         (new AssetController())->index();
         break;
+    case 'assets_export_csv':
+        (new AssetController())->exportCsv();
+        break;
+    case 'assets_export_pdf':
+        (new AssetController())->exportPdf();
+        break;
+    case 'assets_download_template':
+        (new AssetController())->downloadTemplateCsv();
+        break;
+    case 'assets_import_csv':
+        (new AssetController())->importCsv();
+        break;
 
     // 9. Profit & Loss
     case 'profit_loss':

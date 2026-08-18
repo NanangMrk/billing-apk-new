@@ -264,32 +264,98 @@ class CustomerController {
         AuthMiddleware::handle('customers.view');
         $pdo = getDbConnection();
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_package') {
-            AuthMiddleware::handle('settings.manage');
-            if (!Helper::verifyCsrf()) {
-                Helper::setFlash('error', 'Token CSRF tidak valid.');
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+            $action = $_POST['action'];
+
+            if ($action === 'save_package') {
+                AuthMiddleware::handle('settings.manage');
+                if (!Helper::verifyCsrf()) {
+                    Helper::setFlash('error', 'Token CSRF tidak valid.');
+                    Helper::redirect('packages');
+                }
+
+                $name = trim($_POST['name'] ?? '');
+                $dl = trim($_POST['download_speed'] ?? '');
+                $ul = trim($_POST['upload_speed'] ?? '');
+                $price = (int)($_POST['price'] ?? 0);
+                $tax = (int)($_POST['tax_percent'] ?? 11);
+                $fee = (int)($_POST['installation_fee'] ?? 0);
+                $desc = trim($_POST['description'] ?? '');
+                $status = trim($_POST['status'] ?? 'active');
+
+                if (!empty($name) && $price > 0) {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO internet_packages (name, download_speed, upload_speed, price, tax_percent, installation_fee, description, status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ");
+                    $stmt->execute([$name, $dl, $ul, $price, $tax, $fee, $desc, $status]);
+
+                    Helper::logActivity('PACKAGE', 'CREATE', $name, null, "Created package: $name ($price)");
+                    Helper::setFlash('success', "Paket internet $name berhasil ditambahkan.");
+                }
                 Helper::redirect('packages');
             }
 
-            $name = trim($_POST['name'] ?? '');
-            $dl = trim($_POST['download_speed'] ?? '');
-            $ul = trim($_POST['upload_speed'] ?? '');
-            $price = (int)($_POST['price'] ?? 0);
-            $tax = (int)($_POST['tax_percent'] ?? 11);
-            $fee = (int)($_POST['installation_fee'] ?? 0);
-            $desc = trim($_POST['description'] ?? '');
+            if ($action === 'update_package') {
+                AuthMiddleware::handle('settings.manage');
+                if (!Helper::verifyCsrf()) {
+                    Helper::setFlash('error', 'Token CSRF tidak valid.');
+                    Helper::redirect('packages');
+                }
 
-            if (!empty($name) && $price > 0) {
-                $stmt = $pdo->prepare("
-                    INSERT INTO internet_packages (name, download_speed, upload_speed, price, tax_percent, installation_fee, description, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
-                ");
-                $stmt->execute([$name, $dl, $ul, $price, $tax, $fee, $desc]);
+                $id = (int)($_POST['id'] ?? 0);
+                $name = trim($_POST['name'] ?? '');
+                $dl = trim($_POST['download_speed'] ?? '');
+                $ul = trim($_POST['upload_speed'] ?? '');
+                $price = (int)($_POST['price'] ?? 0);
+                $tax = (int)($_POST['tax_percent'] ?? 0);
+                $fee = (int)($_POST['installation_fee'] ?? 0);
+                $desc = trim($_POST['description'] ?? '');
+                $status = trim($_POST['status'] ?? 'active');
 
-                Helper::logActivity('PACKAGE', 'CREATE', $name, null, "Created package: $name ($price)");
-                Helper::setFlash('success', "Paket internet $name berhasil ditambahkan.");
+                if ($id > 0 && !empty($name) && $price > 0) {
+                    $stmt = $pdo->prepare("
+                        UPDATE internet_packages 
+                        SET name = ?, download_speed = ?, upload_speed = ?, price = ?, tax_percent = ?, installation_fee = ?, description = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$name, $dl, $ul, $price, $tax, $fee, $desc, $status, $id]);
+
+                    Helper::logActivity('PACKAGE', 'UPDATE', (string)$id, null, "Updated package #$id: $name ($price)");
+                    Helper::setFlash('success', "Paket internet $name berhasil diperbarui.");
+                }
+                Helper::redirect('packages');
             }
-            Helper::redirect('packages');
+
+            if ($action === 'delete_package') {
+                AuthMiddleware::handle('settings.manage');
+                if (!Helper::verifyCsrf()) {
+                    Helper::setFlash('error', 'Token CSRF tidak valid.');
+                    Helper::redirect('packages');
+                }
+
+                $id = (int)($_POST['id'] ?? 0);
+                if ($id > 0) {
+                    $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM customers WHERE package_id = ?");
+                    $checkStmt->execute([$id]);
+                    $userCount = (int)$checkStmt->fetchColumn();
+
+                    if ($userCount > 0) {
+                        Helper::setFlash('error', "Gagal menghapus: Paket masih digunakan oleh {$userCount} pelanggan. Pindahkan pelanggan ke paket lain terlebih dahulu atau ubah status menjadi Nonaktif.");
+                    } else {
+                        $pkgStmt = $pdo->prepare("SELECT name FROM internet_packages WHERE id = ?");
+                        $pkgStmt->execute([$id]);
+                        $pkgName = $pkgStmt->fetchColumn() ?: "ID #$id";
+
+                        $delStmt = $pdo->prepare("DELETE FROM internet_packages WHERE id = ?");
+                        $delStmt->execute([$id]);
+
+                        Helper::logActivity('PACKAGE', 'DELETE', (string)$id, null, "Deleted package #$id: $pkgName");
+                        Helper::setFlash('success', "Paket internet {$pkgName} berhasil dihapus.");
+                    }
+                }
+                Helper::redirect('packages');
+            }
         }
 
         $packages = $pdo->query("
@@ -313,30 +379,94 @@ class CustomerController {
         AuthMiddleware::handle('customers.view');
         $pdo = getDbConnection();
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_location') {
-            AuthMiddleware::handle('settings.manage');
-            if (!Helper::verifyCsrf()) {
-                Helper::setFlash('error', 'Token CSRF tidak valid.');
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+            $action = $_POST['action'];
+
+            if ($action === 'save_location') {
+                AuthMiddleware::handle('settings.manage');
+                if (!Helper::verifyCsrf()) {
+                    Helper::setFlash('error', 'Token CSRF tidak valid.');
+                    Helper::redirect('locations');
+                }
+
+                $areaName = trim($_POST['area_name'] ?? '');
+                $district = trim($_POST['district'] ?? '');
+                $city = trim($_POST['city'] ?? '');
+                $popName = trim($_POST['pop_name'] ?? '');
+                $odpName = trim($_POST['odp_name'] ?? '');
+                $coverageStatus = trim($_POST['coverage_status'] ?? 'covered');
+
+                if (!empty($areaName)) {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO locations (area_name, district, city, pop_name, odp_name, coverage_status)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ");
+                    $stmt->execute([$areaName, $district, $city, $popName, $odpName, $coverageStatus]);
+
+                    Helper::logActivity('LOCATION', 'CREATE', $areaName, null, "Created location: $areaName ($odpName)");
+                    Helper::setFlash('success', "Area $areaName berhasil didaftarkan.");
+                }
                 Helper::redirect('locations');
             }
 
-            $areaName = trim($_POST['area_name'] ?? '');
-            $district = trim($_POST['district'] ?? '');
-            $city = trim($_POST['city'] ?? '');
-            $popName = trim($_POST['pop_name'] ?? '');
-            $odpName = trim($_POST['odp_name'] ?? '');
+            if ($action === 'update_location') {
+                AuthMiddleware::handle('settings.manage');
+                if (!Helper::verifyCsrf()) {
+                    Helper::setFlash('error', 'Token CSRF tidak valid.');
+                    Helper::redirect('locations');
+                }
 
-            if (!empty($areaName)) {
-                $stmt = $pdo->prepare("
-                    INSERT INTO locations (area_name, district, city, pop_name, odp_name)
-                    VALUES (?, ?, ?, ?, ?)
-                ");
-                $stmt->execute([$areaName, $district, $city, $popName, $odpName]);
+                $id = (int)($_POST['id'] ?? 0);
+                $areaName = trim($_POST['area_name'] ?? '');
+                $district = trim($_POST['district'] ?? '');
+                $city = trim($_POST['city'] ?? '');
+                $popName = trim($_POST['pop_name'] ?? '');
+                $odpName = trim($_POST['odp_name'] ?? '');
+                $coverageStatus = trim($_POST['coverage_status'] ?? 'covered');
 
-                Helper::logActivity('LOCATION', 'CREATE', $areaName, null, "Created location: $areaName ($odpName)");
-                Helper::setFlash('success', "Area $areaName berhasil didaftarkan.");
+                if ($id > 0 && !empty($areaName)) {
+                    $stmt = $pdo->prepare("
+                        UPDATE locations 
+                        SET area_name = ?, district = ?, city = ?, pop_name = ?, odp_name = ?, coverage_status = ?
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$areaName, $district, $city, $popName, $odpName, $coverageStatus, $id]);
+
+                    Helper::logActivity('LOCATION', 'UPDATE', (string)$id, null, "Updated location #$id: $areaName");
+                    Helper::setFlash('success', "Area $areaName berhasil diperbarui.");
+                }
+                Helper::redirect('locations');
             }
-            Helper::redirect('locations');
+
+            if ($action === 'delete_location') {
+                AuthMiddleware::handle('settings.manage');
+                if (!Helper::verifyCsrf()) {
+                    Helper::setFlash('error', 'Token CSRF tidak valid.');
+                    Helper::redirect('locations');
+                }
+
+                $id = (int)($_POST['id'] ?? 0);
+                if ($id > 0) {
+                    $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM customers WHERE location_id = ?");
+                    $checkStmt->execute([$id]);
+                    $customerCount = (int)$checkStmt->fetchColumn();
+
+                    if ($customerCount > 0) {
+                        Helper::setFlash('error', "Gagal menghapus: Area masih digunakan oleh {$customerCount} pelanggan. Harap pindahkan pelanggan ke area lain terlebih dahulu.");
+                    } else {
+                        $locStmt = $pdo->prepare("SELECT area_name FROM locations WHERE id = ?");
+                        $locStmt->execute([$id]);
+                        $locName = $locStmt->fetchColumn() ?: "ID #$id";
+
+                        $delStmt = $pdo->prepare("DELETE FROM locations WHERE id = ?");
+                        $delStmt->execute([$id]);
+
+                        Helper::logActivity('LOCATION', 'DELETE', (string)$id, null, "Deleted location #$id: $locName");
+                        Helper::setFlash('success', "Area {$locName} berhasil dihapus.");
+                    }
+                }
+                Helper::redirect('locations');
+            }
         }
 
         $locations = $pdo->query("
@@ -360,30 +490,92 @@ class CustomerController {
         AuthMiddleware::handle('customers.view');
         $pdo = getDbConnection();
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_pic') {
-            AuthMiddleware::handle('settings.manage');
-            if (!Helper::verifyCsrf()) {
-                Helper::setFlash('error', 'Token CSRF tidak valid.');
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+            $action = $_POST['action'];
+
+            if ($action === 'save_pic') {
+                AuthMiddleware::handle('settings.manage');
+                if (!Helper::verifyCsrf()) {
+                    Helper::setFlash('error', 'Token CSRF tidak valid.');
+                    Helper::redirect('pics');
+                }
+
+                $name = trim($_POST['name'] ?? '');
+                $phone = trim($_POST['phone'] ?? '');
+                $position = trim($_POST['position'] ?? '');
+                $company = trim($_POST['company'] ?? '');
+                $notes = trim($_POST['notes'] ?? '');
+
+                if (!empty($name) && !empty($phone)) {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO customer_pics (name, phone, position, company, notes)
+                        VALUES (?, ?, ?, ?, ?)
+                    ");
+                    $stmt->execute([$name, $phone, $position, $company, $notes]);
+
+                    Helper::logActivity('PIC', 'CREATE', $name, null, "Created PIC: $name");
+                    Helper::setFlash('success', "PIC $name berhasil disimpan.");
+                }
                 Helper::redirect('pics');
             }
 
-            $name = trim($_POST['name'] ?? '');
-            $phone = trim($_POST['phone'] ?? '');
-            $position = trim($_POST['position'] ?? '');
-            $company = trim($_POST['company'] ?? '');
-            $notes = trim($_POST['notes'] ?? '');
+            if ($action === 'update_pic') {
+                AuthMiddleware::handle('settings.manage');
+                if (!Helper::verifyCsrf()) {
+                    Helper::setFlash('error', 'Token CSRF tidak valid.');
+                    Helper::redirect('pics');
+                }
 
-            if (!empty($name) && !empty($phone)) {
-                $stmt = $pdo->prepare("
-                    INSERT INTO customer_pics (name, phone, position, company, notes)
-                    VALUES (?, ?, ?, ?, ?)
-                ");
-                $stmt->execute([$name, $phone, $position, $company, $notes]);
+                $id = (int)($_POST['id'] ?? 0);
+                $name = trim($_POST['name'] ?? '');
+                $phone = trim($_POST['phone'] ?? '');
+                $position = trim($_POST['position'] ?? '');
+                $company = trim($_POST['company'] ?? '');
+                $notes = trim($_POST['notes'] ?? '');
 
-                Helper::logActivity('PIC', 'CREATE', $name, null, "Created PIC: $name");
-                Helper::setFlash('success', "PIC $name berhasil disimpan.");
+                if ($id > 0 && !empty($name) && !empty($phone)) {
+                    $stmt = $pdo->prepare("
+                        UPDATE customer_pics 
+                        SET name = ?, phone = ?, position = ?, company = ?, notes = ?
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$name, $phone, $position, $company, $notes, $id]);
+
+                    Helper::logActivity('PIC', 'UPDATE', (string)$id, null, "Updated PIC #$id: $name");
+                    Helper::setFlash('success', "PIC $name berhasil diperbarui.");
+                }
+                Helper::redirect('pics');
             }
-            Helper::redirect('pics');
+
+            if ($action === 'delete_pic') {
+                AuthMiddleware::handle('settings.manage');
+                if (!Helper::verifyCsrf()) {
+                    Helper::setFlash('error', 'Token CSRF tidak valid.');
+                    Helper::redirect('pics');
+                }
+
+                $id = (int)($_POST['id'] ?? 0);
+                if ($id > 0) {
+                    $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM customers WHERE pic_id = ?");
+                    $checkStmt->execute([$id]);
+                    $customerCount = (int)$checkStmt->fetchColumn();
+
+                    if ($customerCount > 0) {
+                        Helper::setFlash('error', "Gagal menghapus: PIC masih terhubung dengan {$customerCount} pelanggan. Harap ubah data PIC pelanggan terlebih dahulu.");
+                    } else {
+                        $picStmt = $pdo->prepare("SELECT name FROM customer_pics WHERE id = ?");
+                        $picStmt->execute([$id]);
+                        $picName = $picStmt->fetchColumn() ?: "ID #$id";
+
+                        $delStmt = $pdo->prepare("DELETE FROM customer_pics WHERE id = ?");
+                        $delStmt->execute([$id]);
+
+                        Helper::logActivity('PIC', 'DELETE', (string)$id, null, "Deleted PIC #$id: $picName");
+                        Helper::setFlash('success', "PIC {$picName} berhasil dihapus.");
+                    }
+                }
+                Helper::redirect('pics');
+            }
         }
 
         $pics = $pdo->query("

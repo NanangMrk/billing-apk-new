@@ -129,11 +129,11 @@ HTML;
             <span class="text-3xs font-bold text-slate-700 group-hover:text-rose-700">Piutang</span>
           </a>
 
-          <a href="<?php echo Helper::url('tickets'); ?>" class="flex flex-col items-center p-2.5 rounded-2xl bg-slate-50 hover:bg-purple-50 transition-all text-center group">
+          <a href="<?php echo Helper::url('rab'); ?>" class="flex flex-col items-center p-2.5 rounded-2xl bg-slate-50 hover:bg-purple-50 transition-all text-center group">
             <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-xs mb-1.5 group-hover:scale-110 transition-transform">
-              <i class="fa-solid fa-ticket"></i>
+              <i class="fa-solid fa-calculator"></i>
             </div>
-            <span class="text-3xs font-bold text-slate-700 group-hover:text-amber-700">Tiket</span>
+            <span class="text-3xs font-bold text-slate-700 group-hover:text-amber-700">RAB Proyek</span>
           </a>
         </div>
       </div>

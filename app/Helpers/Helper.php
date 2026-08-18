@@ -86,9 +86,10 @@ class Helper {
             
             'unpaid' => ['bg' => 'bg-amber-50 text-amber-700 border-amber-200', 'label' => 'Belum Bayar'],
             'partially_paid' => ['bg' => 'bg-amber-50 text-amber-700 border-amber-200', 'label' => 'Bayar Sebagian'],
-            'in_progress' => ['bg' => 'bg-blue-50 text-blue-700 border-blue-200', 'label' => 'Proses'],
+            'in_progress' => ['bg' => 'bg-blue-50 text-blue-700 border-blue-200', 'label' => 'Proses Realisasi'],
             'assigned' => ['bg' => 'bg-blue-50 text-blue-700 border-blue-200', 'label' => 'Ditugaskan'],
             'open' => ['bg' => 'bg-blue-50 text-blue-700 border-blue-200', 'label' => 'Terbuka'],
+            'submitted' => ['bg' => 'bg-indigo-50 text-indigo-700 border-indigo-200', 'label' => 'Diajukan'],
             'draft' => ['bg' => 'bg-slate-100 text-slate-700 border-slate-200', 'label' => 'Draft'],
             
             'suspended' => ['bg' => 'bg-rose-50 text-rose-700 border-rose-200', 'label' => 'Isolir / Suspend'],

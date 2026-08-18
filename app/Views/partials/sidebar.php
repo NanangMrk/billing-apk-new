@@ -29,7 +29,7 @@ HTML;
 }
 ?>
 <!-- Floating Sidebar (Desktop only, completely hidden on mobile) -->
-<aside class="hidden xl:flex fixed inset-y-0 left-0 z-50 w-64 my-4 ml-4 h-[calc(100vh-2rem)] overflow-y-auto bg-white/95 backdrop-blur-xl rounded-3xl shadow-soft-xl flex-col justify-between">
+<aside id="appSidebar" class="hidden xl:flex fixed inset-y-0 left-0 z-50 w-64 my-4 ml-4 h-[calc(100vh-2rem)] overflow-y-auto bg-white/95 backdrop-blur-xl rounded-3xl shadow-soft-xl flex-col justify-between">
   
   <div>
     <!-- Logo Header -->
@@ -67,7 +67,6 @@ HTML;
 
         <!-- Operations -->
         <?php echo navHeader('Operasional'); ?>
-        <?php echo navItem('tickets', 'Tiket Gangguan', 'fa-ticket', $currentPage); ?>
         <?php echo navItem('rab', 'RAB Proyek', 'fa-calculator', $currentPage); ?>
 
         <!-- Finance -->
@@ -107,3 +106,48 @@ HTML;
     </a>
   </div>
 </aside>
+
+<!-- Preserve Sidebar Scroll Position Across Navigation -->
+<script>
+(function() {
+  const STORAGE_KEY = 'nusantaranet_sidebar_scroll_top';
+  const sidebar = document.getElementById('appSidebar');
+  if (!sidebar) return;
+
+  // Restore scroll position immediately
+  function restoreScroll() {
+    const savedPos = sessionStorage.getItem(STORAGE_KEY);
+    if (savedPos !== null) {
+      sidebar.scrollTop = parseInt(savedPos, 10);
+    }
+  }
+
+  // Restore on execution & on DOMContentLoaded
+  restoreScroll();
+  document.addEventListener('DOMContentLoaded', restoreScroll);
+  window.addEventListener('load', restoreScroll);
+
+  // Save scroll position on scroll (throttled)
+  let scrollTimeout = null;
+  sidebar.addEventListener('scroll', function() {
+    if (scrollTimeout) clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(function() {
+      sessionStorage.setItem(STORAGE_KEY, sidebar.scrollTop);
+    }, 50);
+  }, { passive: true });
+
+  // Save immediately when clicking any navigation link
+  sidebar.querySelectorAll('a').forEach(function(link) {
+    link.addEventListener('click', function() {
+      sessionStorage.setItem(STORAGE_KEY, sidebar.scrollTop);
+    });
+  });
+
+  // Save before page unloads
+  window.addEventListener('beforeunload', function() {
+    if (sidebar) {
+      sessionStorage.setItem(STORAGE_KEY, sidebar.scrollTop);
+    }
+  });
+})();
+</script>
