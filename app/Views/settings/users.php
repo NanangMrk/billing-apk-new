@@ -81,6 +81,12 @@ if (!in_array($activeTab, ['users', 'roles'])) {
                 <i class="fa-solid fa-shield-halved text-2xs"></i>
                 <span><?php echo Helper::e($u['role_display']); ?></span>
               </span>
+              <?php if (!empty($u['pic_name'])): ?>
+              <span class="px-2.5 py-0.5 rounded-lg bg-sky-50 text-sky-800 font-bold text-3xs border border-sky-200/60 flex items-center gap-1 mt-1.5 w-fit">
+                <i class="fa-solid fa-user-tag text-sky-600 text-3xs"></i>
+                <span>Taut PIC: <?php echo Helper::e($u['pic_name']); ?></span>
+              </span>
+              <?php endif; ?>
             </td>
 
             <td class="py-3.5 px-4 whitespace-nowrap text-xs">
@@ -281,6 +287,21 @@ if (!in_array($activeTab, ['users', 'roles'])) {
       </div>
 
       <div>
+        <label class="font-bold text-xs text-slate-700 block mb-1">
+          <i class="fa-solid fa-user-tag text-purple-600 mr-1"></i> Tautkan Akun ke PIC / Mitra Wilayah <span class="text-slate-400 font-normal text-3xs">(Opsional)</span>
+        </label>
+        <select name="pic_id" id="user_pic_id" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500 bg-white">
+          <option value="">-- Akses Global / Bukan Akun PIC Khusus --</option>
+          <?php if (!empty($pics)): ?>
+            <?php foreach ($pics as $pic): ?>
+              <option value="<?php echo $pic['id']; ?>"><?php echo Helper::e($pic['name']); ?> (<?php echo Helper::e($pic['position'] ?: 'PIC'); ?><?php echo !empty($pic['company']) ? ' - ' . Helper::e($pic['company']) : ''; ?>)</option>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </select>
+        <span class="text-3xs text-slate-400 mt-1 block">Jika ditautkan ke PIC, pengguna hanya dapat melihat dan mengelola data pelanggan & tagihan di wilayah PIC tersebut.</span>
+      </div>
+
+      <div>
         <label class="font-bold text-xs text-slate-700 block mb-1">Password <span id="user_password_required" class="text-red-500">*</span></label>
         <input type="password" name="password" id="user_password" placeholder="Kosongkan jika tidak mengubah password saat edit" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500">
       </div>
@@ -468,6 +489,7 @@ function openUserModal() {
   document.getElementById('user_username').value = '';
   document.getElementById('user_email').value = '';
   document.getElementById('user_phone').value = '';
+  document.getElementById('user_pic_id').value = '';
   document.getElementById('user_password').value = 'admin123';
   document.getElementById('user_password_required').style.display = 'inline';
   document.getElementById('user_status_container').classList.add('hidden');
@@ -484,6 +506,7 @@ function openEditUserModal(u) {
   document.getElementById('user_email').value = u.email || '';
   document.getElementById('user_phone').value = u.phone || '';
   document.getElementById('user_role_id').value = u.role_id || 3;
+  document.getElementById('user_pic_id').value = u.pic_id || '';
   document.getElementById('user_status').value = u.status || 'active';
   document.getElementById('user_password').value = '';
   document.getElementById('user_password_required').style.display = 'none';

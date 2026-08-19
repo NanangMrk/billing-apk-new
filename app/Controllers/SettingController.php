@@ -151,11 +151,11 @@ class SettingController {
             ['payroll.manage', 'Payroll & Gaji', 'Memproses & mengelola penggajian'],
 
             // RAB & Proyek
-            ['rab.view', 'RAB & Proyek', 'Melihat data RAB proyek'],
-            ['rab.create', 'RAB & Proyek', 'Membuat draf RAB baru'],
-            ['rab.edit', 'RAB & Proyek', 'Mengubah draf RAB'],
-            ['rab.delete', 'RAB & Proyek', 'Menghapus draf RAB'],
+            ['rab.view', 'RAB & Proyek', 'Melihat data & rincian RAB'],
+            ['rab.create', 'RAB & Proyek', 'Membuat & mengajukan RAB baru'],
+            ['rab.edit', 'RAB & Proyek', 'Mengubah rincian / realisasi RAB'],
             ['rab.approve', 'RAB & Proyek', 'Menyetujui & menolak pengajuan RAB'],
+            ['rab.delete', 'RAB & Proyek', 'Menghapus pengajuan RAB'],
 
             // Inventaris & Gudang
             ['inventory.view', 'Inventaris Gudang', 'Melihat stok barang gudang'],
@@ -196,13 +196,20 @@ class SettingController {
 
         $stmtCheck = $pdo->prepare("SELECT id FROM permissions WHERE name = ?");
         $stmtInsert = $pdo->prepare("INSERT INTO permissions (name, category, description) VALUES (?, ?, ?)");
+        $stmtUpdate = $pdo->prepare("UPDATE permissions SET category = ?, description = ? WHERE name = ?");
 
         foreach ($permissionsList as $p) {
             $stmtCheck->execute([$p[0]]);
-            if (!$stmtCheck->fetch()) {
+            if ($stmtCheck->fetch()) {
+                $stmtUpdate->execute([$p[1], $p[2], $p[0]]);
+            } else {
                 $stmtInsert->execute($p);
             }
         }
+
+        // Clean up obsolete rab.manage if present
+        $pdo->exec("DELETE FROM role_permissions WHERE permission_id IN (SELECT id FROM permissions WHERE name = 'rab.manage')");
+        $pdo->exec("DELETE FROM permissions WHERE name = 'rab.manage'");
 
         return $pdo->query("SELECT * FROM permissions ORDER BY category ASC, id ASC")->fetchAll();
     }
@@ -229,12 +236,13 @@ class SettingController {
                 $email = trim($_POST['email'] ?? '');
                 $phone = trim($_POST['phone'] ?? '');
                 $roleId = (int)($_POST['role_id'] ?? 3);
+                $picId = (int)($_POST['pic_id'] ?? 0) ?: null;
                 $password = trim($_POST['password'] ?? 'admin123');
 
                 if (!empty($name) && !empty($username) && !empty($email)) {
                     $hash = password_hash($password, PASSWORD_BCRYPT);
-                    $stmt = $pdo->prepare("INSERT INTO users (name, username, email, phone, role_id, password, status) VALUES (?, ?, ?, ?, ?, ?, 'active')");
-                    $stmt->execute([$name, $username, $email, $phone, $roleId, $hash]);
+                    $stmt = $pdo->prepare("INSERT INTO users (name, username, email, phone, role_id, pic_id, password, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'active')");
+                    $stmt->execute([$name, $username, $email, $phone, $roleId, $picId, $hash]);
 
                     Helper::logActivity('SETTINGS', 'CREATE_USER', $username, null, "Added user $username ($name)");
                     Helper::setFlash('success', "Pengguna $name berhasil didaftarkan.");
@@ -250,17 +258,18 @@ class SettingController {
                 $email = trim($_POST['email'] ?? '');
                 $phone = trim($_POST['phone'] ?? '');
                 $roleId = (int)($_POST['role_id'] ?? 3);
+                $picId = (int)($_POST['pic_id'] ?? 0) ?: null;
                 $status = trim($_POST['status'] ?? 'active');
                 $password = trim($_POST['password'] ?? '');
 
                 if ($id > 0 && !empty($name) && !empty($username)) {
                     if (!empty($password)) {
                         $hash = password_hash($password, PASSWORD_BCRYPT);
-                        $stmt = $pdo->prepare("UPDATE users SET name = ?, username = ?, email = ?, phone = ?, role_id = ?, status = ?, password = ? WHERE id = ?");
-                        $stmt->execute([$name, $username, $email, $phone, $roleId, $status, $hash, $id]);
+                        $stmt = $pdo->prepare("UPDATE users SET name = ?, username = ?, email = ?, phone = ?, role_id = ?, pic_id = ?, status = ?, password = ? WHERE id = ?");
+                        $stmt->execute([$name, $username, $email, $phone, $roleId, $picId, $status, $hash, $id]);
                     } else {
-                        $stmt = $pdo->prepare("UPDATE users SET name = ?, username = ?, email = ?, phone = ?, role_id = ?, status = ? WHERE id = ?");
-                        $stmt->execute([$name, $username, $email, $phone, $roleId, $status, $id]);
+                        $stmt = $pdo->prepare("UPDATE users SET name = ?, username = ?, email = ?, phone = ?, role_id = ?, pic_id = ?, status = ? WHERE id = ?");
+                        $stmt->execute([$name, $username, $email, $phone, $roleId, $picId, $status, $id]);
                     }
 
                     Helper::logActivity('SETTINGS', 'UPDATE_USER', (string)$id, null, "Updated user $username ($name)");
@@ -291,24 +300,21 @@ class SettingController {
             if ($action === 'save_role') {
                 $displayName = trim($_POST['display_name'] ?? '');
                 $description = trim($_POST['description'] ?? '');
-                $selectedPerms = $_POST['permissions'] ?? [];
 
                 if (!empty($displayName)) {
-                    $nameSlug = strtolower(preg_replace('/[^a-zA-Z0-9_]/', '_', $displayName)) . '_' . time();
-                    $pdo->beginTransaction();
-
+                    $nameSlug = strtolower(preg_replace('/[^a-z0-9_]/', '_', str_replace(' ', '_', $displayName)));
                     $stmt = $pdo->prepare("INSERT INTO roles (name, display_name, description) VALUES (?, ?, ?)");
                     $stmt->execute([$nameSlug, $displayName, $description]);
                     $roleId = (int)$pdo->lastInsertId();
 
-                    if (!empty($selectedPerms) && is_array($selectedPerms)) {
-                        $stmtRP = $pdo->prepare("INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
-                        foreach ($selectedPerms as $permId) {
-                            $stmtRP->execute([$roleId, (int)$permId]);
+                    // Assign permissions
+                    $perms = $_POST['permissions'] ?? [];
+                    if (is_array($perms) && $roleId > 0) {
+                        $stmtP = $pdo->prepare("INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
+                        foreach ($perms as $pId) {
+                            $stmtP->execute([$roleId, (int)$pId]);
                         }
                     }
-
-                    $pdo->commit();
 
                     Helper::logActivity('SETTINGS', 'CREATE_ROLE', (string)$roleId, null, "Created role $displayName");
                     Helper::setFlash('success', "Role \"$displayName\" berhasil dibuat.");
@@ -321,25 +327,22 @@ class SettingController {
                 $roleId = (int)($_POST['id'] ?? 0);
                 $displayName = trim($_POST['display_name'] ?? '');
                 $description = trim($_POST['description'] ?? '');
-                $selectedPerms = $_POST['permissions'] ?? [];
 
                 if ($roleId > 0 && !empty($displayName)) {
-                    $pdo->beginTransaction();
-
                     $stmt = $pdo->prepare("UPDATE roles SET display_name = ?, description = ? WHERE id = ?");
                     $stmt->execute([$displayName, $description, $roleId]);
 
-                    // Reset role permissions
-                    $pdo->prepare("DELETE FROM role_permissions WHERE role_id = ?")->execute([$roleId]);
-
-                    if (!empty($selectedPerms) && is_array($selectedPerms)) {
-                        $stmtRP = $pdo->prepare("INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
-                        foreach ($selectedPerms as $permId) {
-                            $stmtRP->execute([$roleId, (int)$permId]);
+                    // Re-sync permissions (except for Super Admin role which has inherent full access)
+                    if ($roleId !== 1) {
+                        $pdo->prepare("DELETE FROM role_permissions WHERE role_id = ?")->execute([$roleId]);
+                        $perms = $_POST['permissions'] ?? [];
+                        if (is_array($perms)) {
+                            $stmtP = $pdo->prepare("INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)");
+                            foreach ($perms as $pId) {
+                                $stmtP->execute([$roleId, (int)$pId]);
+                            }
                         }
                     }
-
-                    $pdo->commit();
 
                     Helper::logActivity('SETTINGS', 'UPDATE_ROLE', (string)$roleId, null, "Updated role $displayName");
                     Helper::setFlash('success', "Hak akses role \"$displayName\" berhasil diperbarui.");
@@ -374,9 +377,10 @@ class SettingController {
         }
 
         $users = $pdo->query("
-            SELECT u.*, r.display_name as role_display, r.name as role_slug
+            SELECT u.*, r.display_name as role_display, r.name as role_slug, cp.name as pic_name
             FROM users u 
             JOIN roles r ON u.role_id = r.id 
+            LEFT JOIN customer_pics cp ON u.pic_id = cp.id
             ORDER BY u.id ASC
         ")->fetchAll();
 
@@ -387,6 +391,8 @@ class SettingController {
             FROM roles r
             ORDER BY r.id ASC
         ")->fetchAll();
+
+        $pics = $pdo->query("SELECT id, name, position, company FROM customer_pics ORDER BY name ASC")->fetchAll();
 
         // Fetch role permission map
         $rolePermissionsMap = [];

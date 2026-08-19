@@ -129,7 +129,7 @@ HTML;
             <span class="text-3xs font-bold text-slate-700 group-hover:text-rose-700">Piutang</span>
           </a>
 
-          <?php if (!AuthService::isPic()): ?>
+          <?php if (AuthService::hasPermission('rab.view')): ?>
           <a href="<?php echo Helper::url('rab'); ?>" class="flex flex-col items-center p-2.5 rounded-2xl bg-slate-50 hover:bg-purple-50 transition-all text-center group">
             <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-xs mb-1.5 group-hover:scale-110 transition-transform">
               <i class="fa-solid fa-calculator"></i>
@@ -140,12 +140,13 @@ HTML;
         </div>
       </div>
 
-      <?php if (!AuthService::isPic()): ?>
+      <?php if (AuthService::hasPermission('finance.view') || AuthService::hasPermission('payroll.view')): ?>
       <!-- Group 3: Keuangan & Laporan -->
       <div>
         <h6 class="text-3xs font-extrabold text-slate-400 uppercase tracking-wider mb-2 px-1">Keuangan & Akuntansi</h6>
         <div class="grid grid-cols-4 gap-2">
 
+          <?php if (AuthService::hasPermission('finance.view')): ?>
           <a href="<?php echo Helper::url('transactions'); ?>" class="flex flex-col items-center p-2.5 rounded-2xl bg-slate-50 hover:bg-purple-50 transition-all text-center group">
             <div class="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center text-xs mb-1.5 group-hover:scale-110 transition-transform">
               <i class="fa-solid fa-money-bill-transfer"></i>
@@ -159,45 +160,62 @@ HTML;
             </div>
             <span class="text-3xs font-bold text-slate-700 group-hover:text-emerald-700">Arus Kas</span>
           </a>
+          <?php endif; ?>
 
+          <?php if (AuthService::hasPermission('payroll.view')): ?>
+          <a href="<?php echo Helper::url('payroll'); ?>" class="flex flex-col items-center p-2.5 rounded-2xl bg-slate-50 hover:bg-purple-50 transition-all text-center group">
+            <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-xs mb-1.5 group-hover:scale-110 transition-transform">
+              <i class="fa-solid fa-money-check-dollar"></i>
+            </div>
+            <span class="text-3xs font-bold text-slate-700 group-hover:text-purple-700">Payroll</span>
+          </a>
+          <?php endif; ?>
 
         </div>
       </div>
+      <?php endif; ?>
 
       <!-- Group 4: Logistik, Aset & Operasional -->
       <div>
         <h6 class="text-3xs font-extrabold text-slate-400 uppercase tracking-wider mb-2 px-1">Logistik, Aset & Sistem</h6>
         <div class="grid grid-cols-4 gap-2">
+          <?php if (AuthService::hasPermission('inventory.view')): ?>
           <a href="<?php echo Helper::url('inventory'); ?>" class="flex flex-col items-center p-2.5 rounded-2xl bg-slate-50 hover:bg-purple-50 transition-all text-center group">
             <div class="w-9 h-9 rounded-xl bg-orange-100 text-orange-700 flex items-center justify-center text-xs mb-1.5 group-hover:scale-110 transition-transform">
               <i class="fa-solid fa-boxes-stacked"></i>
             </div>
             <span class="text-3xs font-bold text-slate-700 group-hover:text-orange-700">Stok</span>
           </a>
+          <?php endif; ?>
 
+          <?php if (AuthService::hasPermission('assets.view')): ?>
           <a href="<?php echo Helper::url('assets'); ?>" class="flex flex-col items-center p-2.5 rounded-2xl bg-slate-50 hover:bg-purple-50 transition-all text-center group">
             <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-xs mb-1.5 group-hover:scale-110 transition-transform">
               <i class="fa-solid fa-laptop-code"></i>
             </div>
             <span class="text-3xs font-bold text-slate-700 group-hover:text-purple-700">Aset</span>
           </a>
+          <?php endif; ?>
 
+          <?php if (AuthService::hasPermission('ai.use')): ?>
           <a href="<?php echo Helper::url('ai'); ?>" class="flex flex-col items-center p-2.5 rounded-2xl bg-slate-50 hover:bg-purple-50 transition-all text-center group">
             <div class="w-9 h-9 rounded-xl bg-gradient-to-tl from-purple-700 to-pink-500 text-white flex items-center justify-center text-xs mb-1.5 group-hover:scale-110 transition-transform shadow-soft-xs">
               <i class="fa-solid fa-robot"></i>
             </div>
             <span class="text-3xs font-bold text-purple-700">AI Advisor</span>
           </a>
+          <?php endif; ?>
 
+          <?php if (AuthService::hasPermission('settings.company') || AuthService::hasPermission('settings.users')): ?>
           <a href="<?php echo Helper::url('settings_company'); ?>" class="flex flex-col items-center p-2.5 rounded-2xl bg-slate-50 hover:bg-purple-50 transition-all text-center group">
             <div class="w-9 h-9 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center text-xs mb-1.5 group-hover:scale-110 transition-transform">
               <i class="fa-solid fa-gear"></i>
             </div>
             <span class="text-3xs font-bold text-slate-700 group-hover:text-slate-900">Setting</span>
           </a>
+          <?php endif; ?>
         </div>
       </div>
-      <?php endif; ?>
 
       <!-- Logout CTA -->
       <div class="pt-2 border-t border-slate-100">

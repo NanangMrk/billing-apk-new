@@ -72,10 +72,12 @@ $hasActiveFilters = !empty($_GET['search']) || !empty($_GET['status']) || !empty
         <p class="text-2xs text-slate-400">Pengajuan anggaran rincian barang, approval manajemen, dan pencatatan realisasi belanja proyek</p>
       </div>
 
+      <?php if (AuthService::hasPermission('rab.create')): ?>
       <button type="button" onclick="openRabModal()" class="px-4 py-2.5 text-xs font-bold text-white bg-gradient-to-tl from-purple-700 to-pink-500 rounded-2xl shadow-soft-md hover:scale-105 transition-all flex items-center gap-2">
         <i class="fa-solid fa-plus text-xs"></i>
         <span>Ajukan RAB Baru</span>
       </button>
+      <?php endif; ?>
     </div>
 
     <!-- Filter & Search Toolbar -->
@@ -292,7 +294,7 @@ $hasActiveFilters = !empty($_GET['search']) || !empty($_GET['status']) || !empty
                   </button>
 
                   <!-- Actions for SUBMITTED: Approve or Reject -->
-                  <?php if ($r['status'] === 'submitted'): ?>
+                  <?php if ($r['status'] === 'submitted' && AuthService::hasPermission('rab.approve')): ?>
                     <button type="button" 
                             onclick="confirmApproveRab(<?php echo $r['id']; ?>, '<?php echo Helper::e(addslashes($r['project_name'])); ?>', '<?php echo Helper::formatRupiah($r['budget_total']); ?>')" 
                             class="px-2.5 py-1.5 text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-xl font-bold text-2xs transition-colors inline-flex items-center gap-1" 
@@ -311,7 +313,7 @@ $hasActiveFilters = !empty($_GET['search']) || !empty($_GET['status']) || !empty
                   <?php endif; ?>
 
                   <!-- Actions for APPROVED or IN_PROGRESS: Input Realization -->
-                  <?php if (in_array($r['status'], ['approved', 'in_progress'])): ?>
+                  <?php if (in_array($r['status'], ['approved', 'in_progress']) && (AuthService::hasPermission('rab.edit') || AuthService::hasPermission('rab.approve'))): ?>
                     <button type="button" 
                             onclick='openRealizationModal(<?php echo htmlspecialchars(json_encode($r), ENT_QUOTES, "UTF-8"); ?>)' 
                             class="px-2.5 py-1.5 text-purple-700 hover:text-purple-800 bg-purple-50 hover:bg-purple-100 rounded-xl font-bold text-2xs transition-colors inline-flex items-center gap-1 shadow-soft-xs" 
@@ -322,12 +324,14 @@ $hasActiveFilters = !empty($_GET['search']) || !empty($_GET['status']) || !empty
                   <?php endif; ?>
 
                   <!-- Delete Button -->
+                  <?php if (AuthService::hasPermission('rab.delete')): ?>
                   <button type="button" 
                           onclick="confirmDeleteRab(<?php echo $r['id']; ?>, '<?php echo Helper::e(addslashes($r['project_name'])); ?>')" 
                           class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors" 
                           title="Hapus RAB">
                     <i class="fa-solid fa-trash-can text-xs"></i>
                   </button>
+                  <?php endif; ?>
 
                 </div>
               </td>

@@ -155,6 +155,11 @@ class CustomerController {
         $locationId = (int)($_GET['location_id'] ?? 0);
         $picId = (int)($_GET['pic_id'] ?? 0);
 
+        // RBAC: Force PIC filter if logged in as PIC / linked to a specific PIC
+        if (AuthService::isPic() || AuthService::getPicId()) {
+            $picId = AuthService::getPicId() ?: -1;
+        }
+
         $whereSql = "";
         $params = [];
 
@@ -182,6 +187,8 @@ class CustomerController {
         if ($picId > 0) {
             $whereSql .= " AND c.pic_id = ?";
             $params[] = $picId;
+        } elseif ($picId === -1) {
+            $whereSql .= " AND c.pic_id = -1";
         }
 
         // Count total matching customers
@@ -507,35 +514,14 @@ class CustomerController {
                 $notes = trim($_POST['notes'] ?? '');
 
                 if (!empty($name) && !empty($phone)) {
-                    $pdo->beginTransaction();
-                    try {
-                        $stmt = $pdo->prepare("
-                            INSERT INTO customer_pics (name, phone, position, company, notes)
-                            VALUES (?, ?, ?, ?, ?)
-                        ");
-                        $stmt->execute([$name, $phone, $position, $company, $notes]);
-                        $picId = $pdo->lastInsertId();
+                    $stmt = $pdo->prepare("
+                        INSERT INTO customer_pics (name, phone, position, company, notes)
+                        VALUES (?, ?, ?, ?, ?)
+                    ");
+                    $stmt->execute([$name, $phone, $position, $company, $notes]);
 
-                        $username = trim($_POST['username'] ?? '');
-                        $password = trim($_POST['password'] ?? '');
-
-                        if (!empty($username) && !empty($password)) {
-                            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-                            $email = 'pic_' . $picId . '_' . time() . '@isp.local'; // dummy unique email
-                            $userStmt = $pdo->prepare("
-                                INSERT INTO users (role_id, name, username, email, password, pic_id) 
-                                VALUES (?, ?, ?, ?, ?, ?)
-                            ");
-                            $userStmt->execute([8, $name, $username, $email, $hashedPassword, $picId]);
-                        }
-
-                        $pdo->commit();
-                        Helper::logActivity('PIC', 'CREATE', $name, null, "Created PIC: $name");
-                        Helper::setFlash('success', "PIC $name berhasil disimpan.");
-                    } catch (Exception $e) {
-                        $pdo->rollBack();
-                        Helper::setFlash('error', "Gagal menyimpan PIC: " . $e->getMessage());
-                    }
+                    Helper::logActivity('PIC', 'CREATE', $name, null, "Created PIC: $name");
+                    Helper::setFlash('success', "Data PIC $name berhasil disimpan. Untuk membuat akun login atau hak aksesnya, silakan atur di menu Pengaturan Pengguna.");
                 }
                 Helper::redirect('pics');
             }
@@ -555,60 +541,15 @@ class CustomerController {
                 $notes = trim($_POST['notes'] ?? '');
 
                 if ($id > 0 && !empty($name) && !empty($phone)) {
-                    $pdo->beginTransaction();
-                    try {
-                        $stmt = $pdo->prepare("
-                            UPDATE customer_pics 
-                            SET name = ?, phone = ?, position = ?, company = ?, notes = ?
-                            WHERE id = ?
-                        ");
-                        $stmt->execute([$name, $phone, $position, $company, $notes, $id]);
+                    $stmt = $pdo->prepare("
+                        UPDATE customer_pics 
+                        SET name = ?, phone = ?, position = ?, company = ?, notes = ?
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$name, $phone, $position, $company, $notes, $id]);
 
-                        $username = trim($_POST['username'] ?? '');
-                        $password = trim($_POST['password'] ?? '');
-
-                        // Handle User Account for PIC
-                        $checkUserStmt = $pdo->prepare("SELECT id FROM users WHERE pic_id = ? LIMIT 1");
-                        $checkUserStmt->execute([$id]);
-                        $userId = $checkUserStmt->fetchColumn();
-
-                        if ($userId) {
-                            // User exists, update it
-                            if (empty($username)) {
-                                // If username is emptied, we delete the user account entirely (revoke access)
-                                $delUser = $pdo->prepare("DELETE FROM users WHERE id = ?");
-                                $delUser->execute([$userId]);
-                            } else {
-                                // Update username and maybe password
-                                if (!empty($password)) {
-                                    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-                                    $updUser = $pdo->prepare("UPDATE users SET name = ?, username = ?, password = ? WHERE id = ?");
-                                    $updUser->execute([$name, $username, $hashedPassword, $userId]);
-                                } else {
-                                    $updUser = $pdo->prepare("UPDATE users SET name = ?, username = ? WHERE id = ?");
-                                    $updUser->execute([$name, $username, $userId]);
-                                }
-                            }
-                        } else {
-                            // User doesn't exist, create if username is provided
-                            if (!empty($username) && !empty($password)) {
-                                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-                                $email = 'pic_' . $id . '_' . time() . '@isp.local'; // dummy unique email
-                                $userStmt = $pdo->prepare("
-                                    INSERT INTO users (role_id, name, username, email, password, pic_id) 
-                                    VALUES (?, ?, ?, ?, ?, ?)
-                                ");
-                                $userStmt->execute([8, $name, $username, $email, $hashedPassword, $id]);
-                            }
-                        }
-
-                        $pdo->commit();
-                        Helper::logActivity('PIC', 'UPDATE', (string)$id, null, "Updated PIC #$id: $name");
-                        Helper::setFlash('success', "PIC $name berhasil diperbarui.");
-                    } catch (Exception $e) {
-                        $pdo->rollBack();
-                        Helper::setFlash('error', "Gagal memperbarui PIC: " . $e->getMessage());
-                    }
+                    Helper::logActivity('PIC', 'UPDATE', (string)$id, null, "Updated PIC #$id: $name");
+                    Helper::setFlash('success', "Data PIC $name berhasil diperbarui.");
                 }
                 Helper::redirect('pics');
             }
@@ -633,11 +574,14 @@ class CustomerController {
                         $picStmt->execute([$id]);
                         $picName = $picStmt->fetchColumn() ?: "ID #$id";
 
+                        // Unlink any users tied to this PIC
+                        $pdo->prepare("UPDATE users SET pic_id = NULL WHERE pic_id = ?")->execute([$id]);
+
                         $delStmt = $pdo->prepare("DELETE FROM customer_pics WHERE id = ?");
                         $delStmt->execute([$id]);
 
                         Helper::logActivity('PIC', 'DELETE', (string)$id, null, "Deleted PIC #$id: $picName");
-                        Helper::setFlash('success', "PIC {$picName} berhasil dihapus.");
+                        Helper::setFlash('success', "Data PIC {$picName} berhasil dihapus.");
                     }
                 }
                 Helper::redirect('pics');
@@ -666,13 +610,23 @@ class CustomerController {
         AuthMiddleware::handle('customers.view');
         $pdo = getDbConnection();
 
-        $stmt = $pdo->query("
+        $whereSql = "";
+        $params = [];
+        if (AuthService::isPic() || AuthService::getPicId()) {
+            $userPicId = AuthService::getPicId() ?: -1;
+            $whereSql = " WHERE c.pic_id = ? ";
+            $params[] = $userPicId;
+        }
+
+        $stmt = $pdo->prepare("
             SELECT c.customer_no, c.name, c.phone, c.whatsapp, c.email, p.name as package_name, p.price as package_price, l.area_name, c.full_address, c.status, c.installation_date 
             FROM customers c 
             JOIN internet_packages p ON c.package_id = p.id 
             LEFT JOIN locations l ON c.location_id = l.id 
+            {$whereSql}
             ORDER BY c.id ASC
         ");
+        $stmt->execute($params);
         $customers = $stmt->fetchAll();
 
         header('Content-Type: text/csv; charset=utf-8');
@@ -833,7 +787,7 @@ class CustomerController {
         if (!isset($colMap['billing_day'])) $colMap['billing_day'] = 6;
 
         $insertedCount = 0;
-        $updatedCount = 0;
+        $duplicatesCount = 0;
         $newPackagesCount = 0;
         $newLocationsCount = 0;
         $newPicsCount = 0;
@@ -886,7 +840,59 @@ class CustomerController {
 
                 if (empty($rawName)) continue;
 
-                // 1. Resolve / Create Package
+                // Phone & WA formatting
+                if (empty($rawPhone)) {
+                    $rawPhone = '-';
+                }
+                if (empty($rawWhatsapp)) {
+                    $rawWhatsapp = ($rawPhone !== '-') ? $rawPhone : '';
+                }
+
+                // 1. Check if customer already exists (by customer_no, pppoe_username, or name+phone / name+address)
+                $isDuplicate = false;
+
+                // Check by customer_no if provided
+                if (!empty($rawId)) {
+                    $chkNo = $pdo->prepare("SELECT id FROM customers WHERE customer_no = ? LIMIT 1");
+                    $chkNo->execute([$rawId]);
+                    if ($chkNo->fetchColumn()) {
+                        $isDuplicate = true;
+                    }
+                }
+
+                // Check by PPPoE Username if provided
+                if (!$isDuplicate && !empty($rawPppoeUser)) {
+                    $chkPppoe = $pdo->prepare("SELECT id FROM customers WHERE LOWER(pppoe_username) = LOWER(?) LIMIT 1");
+                    $chkPppoe->execute([$rawPppoeUser]);
+                    if ($chkPppoe->fetchColumn()) {
+                        $isDuplicate = true;
+                    }
+                }
+
+                // Check by Name + Phone (or Name + Address)
+                if (!$isDuplicate) {
+                    if (!empty($rawPhone) && $rawPhone !== '-') {
+                        $chkNamePhone = $pdo->prepare("SELECT id FROM customers WHERE LOWER(TRIM(name)) = LOWER(?) AND phone = ? LIMIT 1");
+                        $chkNamePhone->execute([$rawName, $rawPhone]);
+                        if ($chkNamePhone->fetchColumn()) {
+                            $isDuplicate = true;
+                        }
+                    } elseif (!empty($rawAddress)) {
+                        $chkNameAddr = $pdo->prepare("SELECT id FROM customers WHERE LOWER(TRIM(name)) = LOWER(?) AND LOWER(TRIM(full_address)) = LOWER(?) LIMIT 1");
+                        $chkNameAddr->execute([$rawName, $rawAddress]);
+                        if ($chkNameAddr->fetchColumn()) {
+                            $isDuplicate = true;
+                        }
+                    }
+                }
+
+                // If identical/duplicate record found, SKIP without modifying or deleting anything
+                if ($isDuplicate) {
+                    $duplicatesCount++;
+                    continue;
+                }
+
+                // 2. Resolve / Create Package
                 $pkgNameUpper = strtoupper($rawPackage ?: 'PAKET INTERNET');
                 $cleanPrice = (int)preg_replace('/[^0-9]/', '', $rawPrice);
                 if ($cleanPrice === 0) $cleanPrice = 100000;
@@ -901,7 +907,7 @@ class CustomerController {
                     $pkgId = $packageCache[$pkgNameUpper];
                 }
 
-                // 2. Resolve / Create Location Area
+                // 3. Resolve / Create Location Area
                 $targetArea = $rawArea ?: $rawAddress;
                 $locId = null;
                 if (!empty($targetArea)) {
@@ -917,7 +923,7 @@ class CustomerController {
                     }
                 }
 
-                // 3. Resolve / Create PIC
+                // 4. Resolve / Create PIC
                 $picId = null;
                 if (!empty($rawPic)) {
                     $picUpper = strtoupper($rawPic);
@@ -932,7 +938,7 @@ class CustomerController {
                     }
                 }
 
-                // 3. Resolve Status
+                // 5. Resolve Status
                 $status = match($rawStatus) {
                     'aktif', 'active', 'lunas' => 'active',
                     'isolir', 'suspended', 'terisolir' => 'suspended',
@@ -940,84 +946,60 @@ class CustomerController {
                     default => 'active'
                 };
 
-                // 4. Resolve Customer Number
+                // 6. Resolve Customer Number for New Customer
                 $customerNo = $rawId;
                 if (empty($customerNo)) {
                     $count = (int)$pdo->query("SELECT COUNT(*) FROM customers")->fetchColumn() + 1 + $insertedCount;
                     $customerNo = 'CUST-' . str_pad((string)$count, 6, '0', STR_PAD_LEFT);
                 }
 
-                // Phone fallback
-                if (empty($rawPhone)) {
-                    $rawPhone = '-';
-                }
-                if (empty($rawWhatsapp)) {
-                    $rawWhatsapp = ($rawPhone !== '-') ? $rawPhone : '';
+                // Check collision if customerNo was autogenerated
+                $chkCol = $pdo->prepare("SELECT id FROM customers WHERE customer_no = ?");
+                $chkCol->execute([$customerNo]);
+                if ($chkCol->fetchColumn()) {
+                    $count = (int)$pdo->query("SELECT COUNT(*) FROM customers")->fetchColumn() + 1 + $insertedCount + rand(10, 99);
+                    $customerNo = 'CUST-' . str_pad((string)$count, 6, '0', STR_PAD_LEFT);
                 }
 
-                // 5. Check if customer already exists by customer_no
-                $chk = $pdo->prepare("SELECT id FROM customers WHERE customer_no = ?");
-                $chk->execute([$customerNo]);
-                $existingId = $chk->fetchColumn();
-
-                if ($existingId) {
-                    // Update existing
-                    $upd = $pdo->prepare("
-                        UPDATE customers 
-                        SET name = ?, full_address = ?, package_id = ?, location_id = ?, status = ?,
-                            pic_id = CASE WHEN ? IS NOT NULL THEN ? ELSE pic_id END,
-                            phone = CASE WHEN ? != '-' THEN ? ELSE phone END,
-                            whatsapp = CASE WHEN ? != '' THEN ? ELSE whatsapp END,
-                            email = CASE WHEN ? != '' THEN ? ELSE email END,
-                            odp_point = CASE WHEN ? != '' THEN ? ELSE odp_point END,
-                            pppoe_username = CASE WHEN ? != '' THEN ? ELSE pppoe_username END,
-                            pppoe_password = CASE WHEN ? != '' THEN ? ELSE pppoe_password END
-                        WHERE id = ?
-                    ");
-                    $upd->execute([
-                        $rawName, $rawAddress, $pkgId, $locId, $status,
-                        $picId, $picId,
-                        $rawPhone, $rawPhone,
-                        $rawWhatsapp, $rawWhatsapp,
-                        $rawEmail, $rawEmail,
-                        $rawOdp, $rawOdp,
-                        $rawPppoeUser, $rawPppoeUser,
-                        $rawPppoePass, $rawPppoePass,
-                        $existingId
-                    ]);
-                    $updatedCount++;
-                } else {
-                    // Insert new customer
-                    $ins = $pdo->prepare("
-                        INSERT INTO customers (
-                            customer_no, name, phone, whatsapp, email, pic_id, package_id, location_id, 
-                            billing_cycle_id, full_address, odp_point, pppoe_username, pppoe_password,
-                            status, installation_date, activation_date, billing_start_date
-                        ) VALUES (
-                            ?, ?, ?, ?, ?, ?, ?, ?, 
-                            ?, ?, ?, ?, ?,
-                            ?, CURRENT_DATE, CURRENT_DATE, CURRENT_DATE
-                        )
-                    ");
-                    $ins->execute([
-                        $customerNo, $rawName, $rawPhone, $rawWhatsapp, $rawEmail, $picId, $pkgId, $locId,
-                        $defaultCycleId, $rawAddress, $rawOdp, $rawPppoeUser, $rawPppoePass,
-                        $status
-                    ]);
-                    $insertedCount++;
-                }
+                // 7. Insert new customer
+                $ins = $pdo->prepare("
+                    INSERT INTO customers (
+                        customer_no, name, phone, whatsapp, email, pic_id, package_id, location_id, 
+                        billing_cycle_id, full_address, odp_point, pppoe_username, pppoe_password,
+                        status, installation_date, activation_date, billing_start_date
+                    ) VALUES (
+                        ?, ?, ?, ?, ?, ?, ?, ?, 
+                        ?, ?, ?, ?, ?,
+                        ?, CURRENT_DATE, CURRENT_DATE, CURRENT_DATE
+                    )
+                ");
+                $ins->execute([
+                    $customerNo, $rawName, $rawPhone, $rawWhatsapp, $rawEmail, $picId, $pkgId, $locId,
+                    $defaultCycleId, $rawAddress, $rawOdp, $rawPppoeUser, $rawPppoePass,
+                    $status
+                ]);
+                $insertedCount++;
             }
 
             $pdo->commit();
             fclose($handle);
 
-            Helper::logActivity('CUSTOMER', 'IMPORT_CSV', "Imported {$insertedCount} customers, updated {$updatedCount}");
+            Helper::logActivity('CUSTOMER', 'IMPORT_CSV', "Imported {$insertedCount} new customers, {$duplicatesCount} duplicates skipped");
             
-            $msg = "Impor CSV Sukses: {$insertedCount} data baru ditambahkan, {$updatedCount} data diperbarui.";
-            if ($newPackagesCount > 0 || $newLocationsCount > 0) {
-                $msg .= " ({$newPackagesCount} Paket & {$newLocationsCount} Area otomatis didaftarkan).";
+            if ($insertedCount > 0) {
+                $msg = "Impor CSV Sukses: {$insertedCount} data pelanggan baru berhasil ditambahkan.";
+                if ($duplicatesCount > 0) {
+                    $msg .= " ({$duplicatesCount} data pelanggan yang sudah ada dilewati/skip agar tidak duplikat).";
+                }
+                if ($newPackagesCount > 0 || $newLocationsCount > 0 || $newPicsCount > 0) {
+                    $msg .= " ({$newPackagesCount} Paket, {$newLocationsCount} Area, {$newPicsCount} PIC otomatis didaftarkan).";
+                }
+                Helper::setFlash('success', $msg);
+            } elseif ($duplicatesCount > 0) {
+                Helper::setFlash('info', "Semua data pelanggan ({$duplicatesCount} data) sudah ada di sistem dan dilewati tanpa mengubah data yang ada.");
+            } else {
+                Helper::setFlash('warning', "Tidak ada data pelanggan valid yang dapat diimpor.");
             }
-            Helper::setFlash('success', $msg);
         } catch (Exception $e) {
             $pdo->rollBack();
             fclose($handle);

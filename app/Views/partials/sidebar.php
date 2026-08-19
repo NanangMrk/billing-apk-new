@@ -2,7 +2,10 @@
 // app/Views/partials/sidebar.php - Clean Soft UI Floating Sidebar (Hidden on mobile)
 $currentPage = $_GET['page'] ?? 'dashboard';
 
-function navItem(string $page, string $label, string $iconClass, string $currentPage): string {
+function navItem(string $page, string $label, string $iconClass, string $currentPage, ?string $permission = null): string {
+    if ($permission !== null && !AuthService::hasPermission($permission)) {
+        return '';
+    }
     $isActive = ($currentPage === $page);
     $activeBg = $isActive ? 'bg-white shadow-soft-lg font-bold text-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80 font-medium';
     $iconBg = $isActive ? 'bg-gradient-to-tl from-purple-700 to-pink-500 text-white shadow-soft-md' : 'bg-slate-100 text-slate-600';
@@ -20,7 +23,10 @@ function navItem(string $page, string $label, string $iconClass, string $current
 HTML;
 }
 
-function navHeader(string $title): string {
+function navHeader(string $title, ?string $permission = null): string {
+    if ($permission !== null && !AuthService::hasPermission($permission)) {
+        return '';
+    }
     return <<<HTML
     <li class="w-full mt-3 mb-1">
       <h6 class="px-5 text-3xs font-extrabold tracking-wider uppercase text-slate-400">{$title}</h6>
@@ -50,50 +56,61 @@ HTML;
       <ul class="flex flex-col pl-0 mb-0 space-y-0.5">
         
         <!-- Core -->
-        <?php echo navItem('dashboard', 'Dashboard Utama', 'fa-gauge-high', $currentPage); ?>
+        <?php echo navItem('dashboard', 'Dashboard Utama', 'fa-gauge-high', $currentPage, 'dashboard.view'); ?>
 
         <!-- Customer -->
-        <?php echo navHeader('Pelanggan'); ?>
-        <?php echo navItem('customers', 'Data Pelanggan', 'fa-users', $currentPage); ?>
-        <?php echo navItem('packages', 'Paket Internet', 'fa-wifi', $currentPage); ?>
-        <?php echo navItem('locations', 'Area & Coverage', 'fa-map-location-dot', $currentPage); ?>
-        <?php echo navItem('pics', 'Data PIC / RT-RW', 'fa-address-book', $currentPage); ?>
+        <?php if (AuthService::hasPermission('customers.view') || AuthService::hasPermission('packages.view') || AuthService::hasPermission('locations.view') || AuthService::hasPermission('pics.view')): ?>
+          <?php echo navHeader('Pelanggan'); ?>
+          <?php echo navItem('customers', 'Data Pelanggan', 'fa-users', $currentPage, 'customers.view'); ?>
+          <?php echo navItem('packages', 'Paket Internet', 'fa-wifi', $currentPage, 'packages.view'); ?>
+          <?php echo navItem('locations', 'Area & Coverage', 'fa-map-location-dot', $currentPage, 'locations.view'); ?>
+          <?php echo navItem('pics', 'Data PIC / RT-RW', 'fa-address-book', $currentPage, 'pics.view'); ?>
+        <?php endif; ?>
 
         <!-- Billing -->
-        <?php echo navHeader('Billing & Kasir'); ?>
-        <?php echo navItem('invoices', 'Tagihan & Invoice', 'fa-file-invoice-dollar', $currentPage); ?>
-        <?php echo navItem('payments', 'Riwayat Bayar', 'fa-receipt', $currentPage); ?>
-        <?php echo navItem('receivables', 'Aging Piutang', 'fa-clock-rotate-left', $currentPage); ?>
+        <?php if (AuthService::hasPermission('billing.view')): ?>
+          <?php echo navHeader('Billing & Kasir'); ?>
+          <?php echo navItem('invoices', 'Tagihan & Invoice', 'fa-file-invoice-dollar', $currentPage, 'billing.view'); ?>
+          <?php echo navItem('payments', 'Riwayat Bayar', 'fa-receipt', $currentPage, 'billing.view'); ?>
+          <?php echo navItem('receivables', 'Aging Piutang', 'fa-clock-rotate-left', $currentPage, 'billing.view'); ?>
+        <?php endif; ?>
 
-        <?php if (!AuthService::isPic()): ?>
         <!-- Operations -->
-        <?php echo navHeader('Operasional'); ?>
-        <?php echo navItem('rab', 'RAB Proyek', 'fa-calculator', $currentPage); ?>
+        <?php if (AuthService::hasPermission('rab.view')): ?>
+          <?php echo navHeader('Operasional'); ?>
+          <?php echo navItem('rab', 'RAB Proyek', 'fa-calculator', $currentPage, 'rab.view'); ?>
+        <?php endif; ?>
 
         <!-- Finance -->
-        <?php echo navHeader('Keuangan'); ?>
-        <?php echo navItem('transactions', 'Transaksi Kas', 'fa-money-bill-transfer', $currentPage); ?>
-        <?php echo navItem('cashflow', 'Arus Kas (Cashflow)', 'fa-arrow-trend-up', $currentPage); ?>
-        <?php echo navItem('payroll', 'Payroll & Gaji', 'fa-money-check-dollar', $currentPage); ?>
-
+        <?php if (AuthService::hasPermission('finance.view') || AuthService::hasPermission('payroll.view')): ?>
+          <?php echo navHeader('Keuangan'); ?>
+          <?php echo navItem('transactions', 'Transaksi Kas', 'fa-money-bill-transfer', $currentPage, 'finance.view'); ?>
+          <?php echo navItem('cashflow', 'Arus Kas (Cashflow)', 'fa-arrow-trend-up', $currentPage, 'finance.view'); ?>
+          <?php echo navItem('payroll', 'Payroll & Gaji', 'fa-money-check-dollar', $currentPage, 'payroll.view'); ?>
+        <?php endif; ?>
 
         <!-- Inventory & Assets -->
-        <?php echo navHeader('Logistik & Aset'); ?>
-        <?php echo navItem('inventory', 'Katalog Stok', 'fa-boxes-stacked', $currentPage); ?>
-        <?php echo navItem('goods_in', 'Barang Masuk', 'fa-dolly', $currentPage); ?>
-        <?php echo navItem('goods_out', 'Barang Keluar', 'fa-truck-ramp-box', $currentPage); ?>
-        <?php echo navItem('assets', 'Aset Perusahaan', 'fa-laptop-code', $currentPage); ?>
-        <?php echo navItem('suppliers', 'Data Supplier', 'fa-truck-field', $currentPage); ?>
+        <?php if (AuthService::hasPermission('inventory.view') || AuthService::hasPermission('inventory.goods_in') || AuthService::hasPermission('inventory.goods_out') || AuthService::hasPermission('assets.view') || AuthService::hasPermission('inventory.suppliers')): ?>
+          <?php echo navHeader('Logistik & Aset'); ?>
+          <?php echo navItem('inventory', 'Katalog Stok', 'fa-boxes-stacked', $currentPage, 'inventory.view'); ?>
+          <?php echo navItem('goods_in', 'Barang Masuk', 'fa-dolly', $currentPage, 'inventory.goods_in'); ?>
+          <?php echo navItem('goods_out', 'Barang Keluar', 'fa-truck-ramp-box', $currentPage, 'inventory.goods_out'); ?>
+          <?php echo navItem('assets', 'Aset Perusahaan', 'fa-laptop-code', $currentPage, 'assets.view'); ?>
+          <?php echo navItem('suppliers', 'Data Supplier', 'fa-truck-field', $currentPage, 'inventory.suppliers'); ?>
+        <?php endif; ?>
 
         <!-- Intelligence -->
-        <?php echo navHeader('AI & Advisor'); ?>
-        <?php echo navItem('ai', 'AI Assistant', 'fa-robot', $currentPage); ?>
+        <?php if (AuthService::hasPermission('ai.use')): ?>
+          <?php echo navHeader('AI & Advisor'); ?>
+          <?php echo navItem('ai', 'AI Assistant', 'fa-robot', $currentPage, 'ai.use'); ?>
+        <?php endif; ?>
 
         <!-- System Settings -->
-        <?php echo navHeader('Sistem'); ?>
-        <?php echo navItem('settings_company', 'Profil Perusahaan', 'fa-building', $currentPage); ?>
-        <?php echo navItem('settings_users', 'Pengguna & Role', 'fa-user-shield', $currentPage); ?>
-        <?php echo navItem('settings_logs', 'Audit & Activity Log', 'fa-shield-halved', $currentPage); ?>
+        <?php if (AuthService::hasPermission('settings.company') || AuthService::hasPermission('settings.users') || AuthService::hasPermission('settings.roles') || AuthService::hasPermission('settings.logs')): ?>
+          <?php echo navHeader('Sistem'); ?>
+          <?php echo navItem('settings_company', 'Profil Perusahaan', 'fa-building', $currentPage, 'settings.company'); ?>
+          <?php echo navItem('settings_users', 'Pengguna & Role', 'fa-user-shield', $currentPage, 'settings.users'); ?>
+          <?php echo navItem('settings_logs', 'Audit & Activity Log', 'fa-shield-halved', $currentPage, 'settings.logs'); ?>
         <?php endif; ?>
       </ul>
     </div>

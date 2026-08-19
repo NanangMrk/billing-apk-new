@@ -107,6 +107,15 @@ switch ($page) {
     case 'transactions':
         (new FinanceController())->transactions();
         break;
+    case 'transactions_export_csv':
+        (new FinanceController())->exportTransactionsCsv();
+        break;
+    case 'transactions_import_csv':
+        (new FinanceController())->importTransactionsCsv();
+        break;
+    case 'transactions_download_template':
+        (new FinanceController())->downloadTransactionsTemplateCsv();
+        break;
     case 'cashflow':
         (new FinanceController())->cashflow();
         break;

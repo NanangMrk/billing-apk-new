@@ -17,7 +17,7 @@ class RabController {
 
             // 1. Submit New RAB with Items
             if ($action === 'save_rab') {
-                AuthMiddleware::handle('rab.manage');
+                AuthMiddleware::handle('rab.create');
                 if (!Helper::verifyCsrf()) {
                     Helper::setFlash('error', 'Token CSRF tidak valid.');
                     Helper::redirect('rab');
@@ -103,7 +103,7 @@ class RabController {
 
             // 2. Approve RAB
             if ($action === 'approve_rab') {
-                AuthMiddleware::handle('rab.manage');
+                AuthMiddleware::handle('rab.approve');
                 if (!Helper::verifyCsrf()) {
                     Helper::setFlash('error', 'Token CSRF tidak valid.');
                     Helper::redirect('rab');
@@ -128,7 +128,7 @@ class RabController {
 
             // 3. Reject RAB
             if ($action === 'reject_rab') {
-                AuthMiddleware::handle('rab.manage');
+                AuthMiddleware::handle('rab.approve');
                 if (!Helper::verifyCsrf()) {
                     Helper::setFlash('error', 'Token CSRF tidak valid.');
                     Helper::redirect('rab');
@@ -152,7 +152,7 @@ class RabController {
 
             // 4. Save Realization Input
             if ($action === 'save_realization') {
-                AuthMiddleware::handle('rab.manage');
+                AuthMiddleware::handle('rab.edit');
                 if (!Helper::verifyCsrf()) {
                     Helper::setFlash('error', 'Token CSRF tidak valid.');
                     Helper::redirect('rab');
@@ -192,7 +192,7 @@ class RabController {
 
             // 5. Delete RAB
             if ($action === 'delete_rab') {
-                AuthMiddleware::handle('rab.manage');
+                AuthMiddleware::handle('rab.delete');
                 if (!Helper::verifyCsrf()) {
                     Helper::setFlash('error', 'Token CSRF tidak valid.');
                     Helper::redirect('rab');

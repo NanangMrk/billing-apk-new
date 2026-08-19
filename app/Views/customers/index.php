@@ -377,6 +377,7 @@ $offset = $offset ?? 0;
         </select>
       </div>
 
+      <?php if (!AuthService::isPic()): ?>
       <div>
         <label class="font-bold text-slate-700 block mb-1">PIC / Mitra Wilayah</label>
         <select name="pic_id" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500 bg-white font-medium text-slate-800">
@@ -388,6 +389,7 @@ $offset = $offset ?? 0;
           <?php endforeach; ?>
         </select>
       </div>
+      <?php endif; ?>
 
       <div class="flex items-center justify-between pt-3 border-t border-slate-100">
         <a href="<?php echo Helper::url('customers', ['limit' => $limitValue]); ?>" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-red-600 transition-colors">
@@ -451,12 +453,24 @@ $offset = $offset ?? 0;
           </div>
           <div>
             <label class="font-bold text-xs text-slate-700 block mb-1">PIC / Koordinator Wilayah</label>
-            <select name="pic_id" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500">
-              <option value="">-- Tanpa PIC / Mandiri --</option>
-              <?php foreach ($pics as $pic): ?>
-                <option value="<?php echo $pic['id']; ?>"><?php echo Helper::e($pic['name']); ?></option>
-              <?php endforeach; ?>
-            </select>
+            <?php if (AuthService::isPic() && AuthService::getPicId()): ?>
+              <?php 
+                $myPicId = AuthService::getPicId();
+                $myPicName = '';
+                foreach ($pics as $pic) {
+                    if ((int)$pic['id'] === (int)$myPicId) { $myPicName = $pic['name']; break; }
+                }
+              ?>
+              <input type="hidden" name="pic_id" value="<?php echo $myPicId; ?>">
+              <input type="text" readonly disabled value="<?php echo Helper::e($myPicName ?: 'PIC Anda'); ?>" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-100 font-bold text-slate-700 cursor-not-allowed">
+            <?php else: ?>
+              <select name="pic_id" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500">
+                <option value="">-- Tanpa PIC / Mandiri --</option>
+                <?php foreach ($pics as $pic): ?>
+                  <option value="<?php echo $pic['id']; ?>"><?php echo Helper::e($pic['name']); ?></option>
+                <?php endforeach; ?>
+              </select>
+            <?php endif; ?>
           </div>
         </div>
 
@@ -780,9 +794,10 @@ $offset = $offset ?? 0;
             </tbody>
           </table>
         </div>
-        <div class="flex flex-wrap items-center justify-between text-3xs text-slate-400 pt-1">
-          <span>* Paket Internet, Area Coverage &amp; PIC Wilayah baru akan otomatis didaftarkan jika belum ada.</span>
-          <span>* Kolom yang tidak diisi dapat dikosongkan.</span>
+        <div class="flex flex-wrap items-center justify-between text-3xs text-slate-500 pt-1 gap-1">
+          <span>&bull; Data pelanggan duplikat (ID, Username PPPoE, atau Nama &amp; No HP sama) akan <strong>otomatis dilewati (skip)</strong>.</span>
+          <span>&bull; Data pelanggan yang sudah ada <strong>tidak akan dihapus/ditimpa</strong>, hanya menambahkan pelanggan baru.</span>
+          <span>&bull; Paket Internet, Area Coverage &amp; PIC Wilayah baru akan otomatis didaftarkan jika belum ada.</span>
         </div>
       </div>
     </div>

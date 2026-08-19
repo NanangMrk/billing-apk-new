@@ -47,6 +47,12 @@
                 <div>
                   <span class="text-xs font-bold text-slate-900 block"><?php echo Helper::e($pic['name']); ?></span>
                   <span class="text-2xs text-slate-400 block"><?php echo Helper::e($pic['notes'] ?: '-'); ?></span>
+                  <?php if (!empty($pic['username'])): ?>
+                    <span class="px-2 py-0.5 rounded-lg bg-purple-50 text-purple-700 font-bold text-3xs border border-purple-200/60 inline-flex items-center gap-1 mt-1">
+                      <i class="fa-solid fa-user-check text-3xs"></i>
+                      <span>Akun: @<?php echo Helper::e($pic['username']); ?></span>
+                    </span>
+                  <?php endif; ?>
                 </div>
               </div>
             </td>
@@ -142,24 +148,17 @@
         </div>
       </div>
 
-      <div class="p-3 bg-purple-50 rounded-2xl border border-purple-100 space-y-3">
-        <h6 class="font-bold text-xs text-purple-800">Akses Portal PIC (Opsional)</h6>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="font-bold text-xs text-slate-700 block mb-1">Username Login</label>
-            <input type="text" name="username" placeholder="contoh: hendra_rw04" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500">
-          </div>
-          <div>
-            <label class="font-bold text-xs text-slate-700 block mb-1">Password</label>
-            <input type="password" name="password" placeholder="Minimal 6 karakter" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500">
-          </div>
-        </div>
-        <p class="text-3xs text-purple-600">Isi username dan password jika PIC ini diizinkan login untuk melihat tagihan warganya.</p>
-      </div>
-
       <div>
         <label class="font-bold text-xs text-slate-700 block mb-1">Catatan</label>
         <textarea name="notes" rows="2" placeholder="Catatan koordinator..." class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500"></textarea>
+      </div>
+
+      <div class="p-3 bg-purple-50/60 rounded-2xl border border-purple-100 flex items-center justify-between text-2xs text-purple-900">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-user-shield text-purple-600"></i>
+          <span>Akun login & hak akses dapat ditautkan di menu <strong>Pengguna & Role</strong>.</span>
+        </div>
+        <a href="<?php echo Helper::url('settings_users'); ?>" class="text-purple-700 hover:text-purple-900 font-bold underline whitespace-nowrap ml-2">Buka Pengguna</a>
       </div>
 
       <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
@@ -220,24 +219,17 @@
         </div>
       </div>
 
-      <div class="p-3 bg-blue-50 rounded-2xl border border-blue-100 space-y-3">
-        <h6 class="font-bold text-xs text-blue-800">Akses Portal PIC</h6>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="font-bold text-xs text-slate-700 block mb-1">Username Login</label>
-            <input type="text" name="username" id="edit_pic_username" placeholder="contoh: hendra_rw04" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500">
-          </div>
-          <div>
-            <label class="font-bold text-xs text-slate-700 block mb-1">Password Baru</label>
-            <input type="password" name="password" placeholder="(Kosongkan jika tidak diubah)" class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500">
-          </div>
-        </div>
-        <p class="text-3xs text-blue-600">Kosongkan username jika PIC tidak diizinkan untuk login.</p>
-      </div>
-
       <div>
         <label class="font-bold text-xs text-slate-700 block mb-1">Catatan</label>
         <textarea name="notes" id="edit_pic_notes" rows="2" placeholder="Catatan koordinator..." class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-purple-500"></textarea>
+      </div>
+
+      <div class="p-3 bg-purple-50/60 rounded-2xl border border-purple-100 flex items-center justify-between text-2xs text-purple-900">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-user-shield text-purple-600"></i>
+          <span>Pengaturan akun login & hak akses dikelola di menu <strong>Pengguna & Role</strong>.</span>
+        </div>
+        <a href="<?php echo Helper::url('settings_users'); ?>" class="text-purple-700 hover:text-purple-900 font-bold underline whitespace-nowrap ml-2">Buka Pengguna</a>
       </div>
 
       <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
@@ -302,7 +294,6 @@ function openEditPicModal(pic) {
   document.getElementById('edit_pic_position').value = pic.position || '';
   document.getElementById('edit_pic_company').value = pic.company || '';
   document.getElementById('edit_pic_notes').value = pic.notes || '';
-  document.getElementById('edit_pic_username').value = pic.username || '';
 
   openModal('editPicModal', 'editPicModalContent');
 }
