@@ -101,6 +101,12 @@ try {
         VALUES (1, 'local', 'local-engine', '', '', 0.7, 2048, ?, 1)
     ")->execute([$defaultSystemPrompt]);
 
+    // Default Auto-Billing Config
+    $pdo->prepare("
+        INSERT INTO auto_billing_config (id, status, days_before_due, default_due_day)
+        VALUES (1, 'inactive', 7, 1)
+    ")->execute();
+
     $pdo->commit();
     echo "Fresh database initialized with 0 dummy records and 1 Super Admin (admin@email.com).\n";
 

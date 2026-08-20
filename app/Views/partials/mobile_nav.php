@@ -2,29 +2,31 @@
 // app/Views/partials/mobile_nav.php - App-like Mobile Bottom Navigation Bar & Feature Sheet Drawer
 $currentPage = $_GET['page'] ?? 'dashboard';
 
-function mobileNavItem(string $page, string $label, string $icon, string $currentPage): string {
-    $isActive = ($currentPage === $page);
-    $url = Helper::url($page);
-    
-    if ($isActive) {
+if (!function_exists('mobileNavItem')) {
+    function mobileNavItem(string $page, string $label, string $icon, string $currentPage): string {
+        $isActive = ($currentPage === $page);
+        $url = Helper::url($page);
+        
+        if ($isActive) {
+            return <<<HTML
+            <a href="{$url}" class="flex flex-col items-center justify-center flex-1 py-1 text-purple-700 transition-all">
+              <div class="w-10 h-7 rounded-full bg-gradient-to-tl from-purple-700 to-pink-500 text-white flex items-center justify-center shadow-soft-sm text-xs mb-0.5">
+                <i class="fa-solid {$icon}"></i>
+              </div>
+              <span class="text-3xs font-extrabold tracking-tight">{$label}</span>
+            </a>
+HTML;
+        }
+
         return <<<HTML
-        <a href="{$url}" class="flex flex-col items-center justify-center flex-1 py-1 text-purple-700 transition-all">
-          <div class="w-10 h-7 rounded-full bg-gradient-to-tl from-purple-700 to-pink-500 text-white flex items-center justify-center shadow-soft-sm text-xs mb-0.5">
+        <a href="{$url}" class="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 hover:text-slate-700 transition-all">
+          <div class="w-10 h-7 flex items-center justify-center text-sm mb-0.5">
             <i class="fa-solid {$icon}"></i>
           </div>
-          <span class="text-3xs font-extrabold tracking-tight">{$label}</span>
+          <span class="text-3xs font-semibold tracking-tight">{$label}</span>
         </a>
 HTML;
     }
-
-    return <<<HTML
-    <a href="{$url}" class="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 hover:text-slate-700 transition-all">
-      <div class="w-10 h-7 flex items-center justify-center text-sm mb-0.5">
-        <i class="fa-solid {$icon}"></i>
-      </div>
-      <span class="text-3xs font-semibold tracking-tight">{$label}</span>
-    </a>
-HTML;
 }
 ?>
 

@@ -267,6 +267,15 @@ class BillingController {
         }
 
         // Fetch Auto-Billing Configuration
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS auto_billing_config (
+                id INTEGER PRIMARY KEY DEFAULT 1,
+                status TEXT NOT NULL DEFAULT 'inactive',
+                days_before_due INTEGER NOT NULL DEFAULT 7,
+                default_due_day INTEGER NOT NULL DEFAULT 1,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ");
         $autoBilling = $pdo->query("SELECT * FROM auto_billing_config WHERE id = 1")->fetch();
         if (!$autoBilling) {
             $pdo->exec("INSERT INTO auto_billing_config (id, status, days_before_due, default_due_day) VALUES (1, 'inactive', 7, 1)");

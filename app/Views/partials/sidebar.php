@@ -2,36 +2,40 @@
 // app/Views/partials/sidebar.php - Clean Soft UI Floating Sidebar (Hidden on mobile)
 $currentPage = $_GET['page'] ?? 'dashboard';
 
-function navItem(string $page, string $label, string $iconClass, string $currentPage, ?string $permission = null): string {
-    if ($permission !== null && !AuthService::hasPermission($permission)) {
-        return '';
-    }
-    $isActive = ($currentPage === $page);
-    $activeBg = $isActive ? 'bg-white shadow-soft-lg font-bold text-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80 font-medium';
-    $iconBg = $isActive ? 'bg-gradient-to-tl from-purple-700 to-pink-500 text-white shadow-soft-md' : 'bg-slate-100 text-slate-600';
-    $url = Helper::url($page);
+if (!function_exists('navItem')) {
+    function navItem(string $page, string $label, string $iconClass, string $currentPage, ?string $permission = null): string {
+        if ($permission !== null && !AuthService::hasPermission($permission)) {
+            return '';
+        }
+        $isActive = ($currentPage === $page);
+        $activeBg = $isActive ? 'bg-white shadow-soft-lg font-bold text-slate-900' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/80 font-medium';
+        $iconBg = $isActive ? 'bg-gradient-to-tl from-purple-700 to-pink-500 text-white shadow-soft-md' : 'bg-slate-100 text-slate-600';
+        $url = Helper::url($page);
 
-    return <<<HTML
-    <li class="w-full">
-      <a class="py-2.5 my-0.5 mx-2 flex items-center px-3.5 rounded-2xl transition-all duration-200 text-xs {$activeBg}" href="{$url}">
-        <div class="mr-3 flex h-7 w-7 items-center justify-center rounded-xl {$iconBg} text-center shrink-0">
-          <i class="fa-solid {$iconClass} text-2xs"></i>
-        </div>
-        <span class="truncate tracking-tight">{$label}</span>
-      </a>
-    </li>
+        return <<<HTML
+        <li class="w-full">
+          <a class="py-2.5 my-0.5 mx-2 flex items-center px-3.5 rounded-2xl transition-all duration-200 text-xs {$activeBg}" href="{$url}">
+            <div class="mr-3 flex h-7 w-7 items-center justify-center rounded-xl {$iconBg} text-center shrink-0">
+              <i class="fa-solid {$iconClass} text-2xs"></i>
+            </div>
+            <span class="truncate tracking-tight">{$label}</span>
+          </a>
+        </li>
 HTML;
+    }
 }
 
-function navHeader(string $title, ?string $permission = null): string {
-    if ($permission !== null && !AuthService::hasPermission($permission)) {
-        return '';
-    }
-    return <<<HTML
-    <li class="w-full mt-3 mb-1">
-      <h6 class="px-5 text-3xs font-extrabold tracking-wider uppercase text-slate-400">{$title}</h6>
-    </li>
+if (!function_exists('navHeader')) {
+    function navHeader(string $title, ?string $permission = null): string {
+        if ($permission !== null && !AuthService::hasPermission($permission)) {
+            return '';
+        }
+        return <<<HTML
+        <li class="w-full mt-3 mb-1">
+          <h6 class="px-5 text-3xs font-extrabold tracking-wider uppercase text-slate-400">{$title}</h6>
+        </li>
 HTML;
+    }
 }
 ?>
 <!-- Floating Sidebar (Desktop only, completely hidden on mobile) -->

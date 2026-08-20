@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS role_permissions (
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     role_id INTEGER NOT NULL,
+    pic_id INTEGER DEFAULT NULL,
     name TEXT NOT NULL,
     username TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL UNIQUE,
@@ -39,7 +40,8 @@ CREATE TABLE IF NOT EXISTS users (
     last_login DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (role_id) REFERENCES roles(id)
+    FOREIGN KEY (role_id) REFERENCES roles(id),
+    FOREIGN KEY (pic_id) REFERENCES customer_pics(id) ON DELETE SET NULL
 );
 
 -- 2. MASTER DATA (PACKAGES, LOCATIONS, PIC, SUPPLIERS, WAREHOUSES)
@@ -185,6 +187,14 @@ CREATE TABLE IF NOT EXISTS invoice_items (
     subtotal INTEGER NOT NULL DEFAULT 0,
     notes TEXT,
     FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS auto_billing_config (
+    id INTEGER PRIMARY KEY DEFAULT 1,
+    status TEXT NOT NULL DEFAULT 'inactive', -- active, inactive
+    days_before_due INTEGER NOT NULL DEFAULT 7,
+    default_due_day INTEGER NOT NULL DEFAULT 1,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 5. FINANCE MODULE
