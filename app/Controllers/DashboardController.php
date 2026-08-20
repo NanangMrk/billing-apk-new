@@ -172,8 +172,12 @@ class DashboardController {
         ")->fetchAll(PDO::FETCH_ASSOC);
 
         // 11. AI Provider Status
-        $aiSetting = $pdo->query("SELECT provider, model FROM ai_settings WHERE id = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-        $aiProvider = $aiSetting['provider'] ?? 'local';
+        try {
+            $aiSetting = $pdo->query("SELECT provider, model FROM ai_settings WHERE id = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+            $aiProvider = $aiSetting['provider'] ?? 'local';
+        } catch (Exception $e) {
+            $aiProvider = 'local';
+        }
 
         $pageTitle = 'Dashboard Utama';
 

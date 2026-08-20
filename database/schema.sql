@@ -469,7 +469,19 @@ CREATE TABLE IF NOT EXISTS tickets (
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- 10. AI ASSISTANT & SYSTEM
+CREATE TABLE IF NOT EXISTS ai_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider TEXT NOT NULL DEFAULT 'local',
+    model TEXT NOT NULL DEFAULT 'local-engine',
+    api_key TEXT DEFAULT NULL,
+    base_url TEXT DEFAULT NULL,
+    temperature REAL DEFAULT 0.7,
+    max_tokens INTEGER DEFAULT 2048,
+    system_prompt TEXT DEFAULT NULL,
+    is_active INTEGER DEFAULT 1,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS ai_providers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,

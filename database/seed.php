@@ -88,6 +88,19 @@ try {
         $stmtUser->execute($u);
     }
 
+    // Default Company Profile
+    $pdo->prepare("
+        INSERT INTO company_profile (id, company_name, brand_name, address, phone, whatsapp, email, website)
+        VALUES (1, 'PT Nusantara Net Mandiri', 'NusantaraNet ISP', 'Jl. Fiber Optik No. 88, Cyber City, Jakarta', '021-88997700', '081234567890', 'info@nusantaranet.id', 'https://nusantaranet.id')
+    ")->execute();
+
+    // Default AI Settings
+    $defaultSystemPrompt = "Anda adalah AI Business & Financial Advisor untuk ISP (Internet Service Provider) NusantaraNet. Analisis data riil tagihan, kas bank, RAB proyek, stok gudang, dan PIC koordinator wilayah dengan objektif, akurat, dan berikan rekomendasi operasional yang taktis dalam bahasa Indonesia.";
+    $pdo->prepare("
+        INSERT INTO ai_settings (id, provider, model, api_key, base_url, temperature, max_tokens, system_prompt, is_active)
+        VALUES (1, 'local', 'local-engine', '', '', 0.7, 2048, ?, 1)
+    ")->execute([$defaultSystemPrompt]);
+
     $pdo->commit();
     echo "Fresh database initialized with 0 dummy records and 1 Super Admin (admin@email.com).\n";
 
