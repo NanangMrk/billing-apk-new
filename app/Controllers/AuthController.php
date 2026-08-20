@@ -23,7 +23,8 @@ class AuthController {
             if (empty($username) || empty($password)) {
                 Helper::setFlash('error', 'Username dan password wajib diisi.');
             } else {
-                if (AuthService::attempt($username, $password)) {
+                $remember = !isset($_POST['remember']) || !empty($_POST['remember']);
+                if (AuthService::attempt($username, $password, $remember)) {
                     Helper::setFlash('success', 'Selamat datang kembali, ' . AuthService::user()['name'] . '!');
                     Helper::redirect('dashboard');
                 } else {

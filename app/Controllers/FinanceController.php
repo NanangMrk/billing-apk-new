@@ -167,6 +167,37 @@ class FinanceController {
                 Helper::redirect('transactions');
             }
 
+            if ($action === 'batch_delete_transactions') {
+                $ids = $_POST['trx_ids'] ?? [];
+                if (!is_array($ids)) {
+                    $ids = explode(',', (string)$ids);
+                }
+                $ids = array_filter(array_map('intval', $ids));
+                if (!empty($ids)) {
+                    $pdo->beginTransaction();
+                    $inClause = implode(',', array_fill(0, count($ids), '?'));
+                    $stmtTrx = $pdo->prepare("SELECT * FROM finance_transactions WHERE id IN ($inClause)");
+                    $stmtTrx->execute($ids);
+                    $records = $stmtTrx->fetchAll();
+
+                    foreach ($records as $oldTrx) {
+                        if (in_array($oldTrx['type'], ['income', 'debt'])) {
+                            $pdo->prepare("UPDATE finance_accounts SET current_balance = current_balance - ? WHERE id = ?")->execute([$oldTrx['amount'], $oldTrx['account_id']]);
+                        } else {
+                            $pdo->prepare("UPDATE finance_accounts SET current_balance = current_balance + ? WHERE id = ?")->execute([$oldTrx['amount'], $oldTrx['account_id']]);
+                        }
+                    }
+
+                    $stmtDel = $pdo->prepare("DELETE FROM finance_transactions WHERE id IN ($inClause)");
+                    $stmtDel->execute($ids);
+                    $pdo->commit();
+
+                    Helper::logActivity('FINANCE', 'BATCH_DELETE_TRX', implode(',', $ids), null, "Batch deleted " . count($ids) . " transactions");
+                    Helper::setFlash('success', count($ids) . " transaksi berhasil dihapus.");
+                }
+                Helper::redirect('transactions');
+            }
+
             if ($action === 'delete_transaction') {
                 $id = (int)($_POST['id'] ?? 0);
                 if ($id > 0) {
@@ -364,44 +395,66 @@ class FinanceController {
         $searchQuery = trim($_GET['search'] ?? '');
         $type = trim($_GET['type'] ?? '');
 
-        $sql = "
-            SELECT t.*, a.account_name, a.bank_name, c.name as category_name, u.name as creator_name 
-            FROM finance_transactions t 
-            JOIN finance_accounts a ON t.account_id = a.id 
-            LEFT JOIN finance_categories c ON t.category_id = c.id 
-            LEFT JOIN users u ON t.created_by = u.id 
-            WHERE 1=1
-        ";
-        $params = [];
+        $idsParam = trim($_GET['ids'] ?? '');
+        if (!empty($idsParam)) {
+            $idsArr = array_filter(array_map('intval', explode(',', $idsParam)));
+            if (!empty($idsArr)) {
+                $inClause = implode(',', array_fill(0, count($idsArr), '?'));
+                $sql = "
+                    SELECT t.*, a.account_name, a.bank_name, c.name as category_name, u.name as creator_name 
+                    FROM finance_transactions t 
+                    JOIN finance_accounts a ON t.account_id = a.id 
+                    LEFT JOIN finance_categories c ON t.category_id = c.id 
+                    LEFT JOIN users u ON t.created_by = u.id 
+                    WHERE t.id IN ($inClause)
+                    ORDER BY t.transaction_date DESC, t.id DESC
+                ";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($idsArr);
+                $transactions = $stmt->fetchAll();
+            } else {
+                $transactions = [];
+            }
+        } else {
+            $sql = "
+                SELECT t.*, a.account_name, a.bank_name, c.name as category_name, u.name as creator_name 
+                FROM finance_transactions t 
+                JOIN finance_accounts a ON t.account_id = a.id 
+                LEFT JOIN finance_categories c ON t.category_id = c.id 
+                LEFT JOIN users u ON t.created_by = u.id 
+                WHERE 1=1
+            ";
+            $params = [];
 
-        if (!empty($filterMonth)) {
-            $sql .= " AND strftime('%Y-%m', t.transaction_date) = ?";
-            $params[] = $filterMonth;
+            if (!empty($filterMonth)) {
+                $sql .= " AND strftime('%Y-%m', t.transaction_date) = ?";
+                $params[] = $filterMonth;
+            }
+
+            if ($accountId > 0) {
+                $sql .= " AND t.account_id = ?";
+                $params[] = $accountId;
+            }
+
+            if (!empty($type)) {
+                $sql .= " AND t.type = ?";
+                $params[] = $type;
+            }
+
+            if ($searchQuery !== '') {
+                $sql .= " AND (t.description LIKE ? OR t.transaction_no LIKE ? OR c.name LIKE ?)";
+                $searchLike = "%{$searchQuery}%";
+                $params[] = $searchLike;
+                $params[] = $searchLike;
+                $params[] = $searchLike;
+            }
+
+            $sql .= " ORDER BY t.transaction_date DESC, t.id DESC";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $transactions = $stmt->fetchAll();
         }
-
-        if ($accountId > 0) {
-            $sql .= " AND t.account_id = ?";
-            $params[] = $accountId;
-        }
-
-        if (!empty($type)) {
-            $sql .= " AND t.type = ?";
-            $params[] = $type;
-        }
-
-        if ($searchQuery !== '') {
-            $sql .= " AND (t.description LIKE ? OR t.transaction_no LIKE ? OR c.name LIKE ?)";
-            $searchLike = "%{$searchQuery}%";
-            $params[] = $searchLike;
-            $params[] = $searchLike;
-            $params[] = $searchLike;
-        }
-
-        $sql .= " ORDER BY t.transaction_date DESC, t.id DESC";
-
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
-        $transactions = $stmt->fetchAll();
 
         $filename = 'Jurnal_Transaksi_Kas_' . date('Ymd_His') . '.csv';
 

@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Billing ISP</string>
+    <string name="web_url">https://billing.nanangmrk.id/</string>
+    <string name="offline_title">Koneksi Terputus</string>
+    <string name="offline_msg">Pastikan koneksi internet WiFi atau Data Seluler Anda aktif, lalu tekan tombol coba lagi.</string>
+    <string name="btn_retry">Coba Lagi</string>
+</resources>

@@ -8,6 +8,10 @@ require_once __DIR__ . '/../Services/AuthService.php';
 class LandingController {
 
     public function index(): void {
+        if (AuthService::check()) {
+            Helper::redirect('dashboard');
+        }
+
         $pdo = getDbConnection();
 
         // Fetch active internet packages

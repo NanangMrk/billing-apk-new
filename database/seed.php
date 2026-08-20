@@ -78,14 +78,10 @@ try {
         }
     }
 
-    // Default Users
-    $passwordHash = password_hash('admin123', PASSWORD_BCRYPT);
+    // Default Super Admin User
+    $passwordHash = password_hash('password123', PASSWORD_BCRYPT);
     $users = [
-        [1, 'Super Administrator', 'admin', 'admin@nusantaranet.id', '081234567890', $passwordHash, 'active'],
-        [2, 'Budi Santoso (Owner)', 'owner', 'owner@nusantaranet.id', '081234567891', $passwordHash, 'active'],
-        [4, 'Siti Rahma (Finance)', 'finance', 'finance@nusantaranet.id', '081234567892', $passwordHash, 'active'],
-        [5, 'Dewi Lestari (Billing)', 'billing', 'billing@nusantaranet.id', '081234567893', $passwordHash, 'active'],
-        [6, 'Ahmad Fauzi (Teknisi)', 'teknisi', 'teknisi@nusantaranet.id', '081234567894', $passwordHash, 'active']
+        [1, 'Super Administrator', 'admin@email.com', 'admin@email.com', '081234567890', $passwordHash, 'active']
     ];
     $stmtUser = $pdo->prepare("INSERT INTO users (role_id, name, username, email, phone, password, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
     foreach ($users as $u) {

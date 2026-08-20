@@ -83,6 +83,55 @@ $totalReceivables = array_reduce($receivables, fn($sum, $t) => $sum + $t['amount
     </div>
   </form>
 
+  <!-- Batch Action Floating / Sticky Bar -->
+  <div id="batchActionBar" class="hidden p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-purple-950 to-indigo-950 text-white shadow-soft-xl items-center justify-between gap-4 transition-all duration-300 border border-purple-800/40">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-purple-500/20 flex items-center justify-center text-sm font-black text-pink-400 border border-purple-400/30 shrink-0">
+        <i class="fa-solid fa-check-double"></i>
+      </div>
+      <div>
+        <span class="font-extrabold text-sm block leading-tight">
+          <span id="selectedTrxCount" class="text-pink-400 font-mono text-base">0</span> Transaksi Terpilih
+        </span>
+        <span class="text-3xs text-slate-300">Pilih opsi konfigurasi batch / aksi massal</span>
+      </div>
+    </div>
+
+    <!-- Batch Action Buttons -->
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Batch Delete Button -->
+      <button type="button" onclick="executeBatchDeleteTrx()" class="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-2xs transition-all flex items-center gap-1.5 shadow-soft-xs hover:scale-102">
+        <i class="fa-solid fa-trash-can"></i>
+        <span>Hapus Massal</span>
+      </button>
+
+      <!-- Batch Export CSV -->
+      <button type="button" onclick="executeBatchExportTrx()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-2xs transition-all flex items-center gap-1.5 shadow-soft-xs hover:scale-102">
+        <i class="fa-solid fa-file-csv"></i>
+        <span>Export Terpilih</span>
+      </button>
+
+      <!-- Deselect All Button -->
+      <button type="button" onclick="deselectAllTrx()" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white font-bold text-2xs transition-all">
+        Batal Pilih
+      </button>
+    </div>
+  </div>
+
+  <!-- Hidden Form: Delete Single Transaction -->
+  <form id="deleteTrxForm" method="POST" action="<?php echo Helper::url('transactions'); ?>" class="hidden">
+    <?php echo Helper::csrfField(); ?>
+    <input type="hidden" name="action" value="delete_transaction">
+    <input type="hidden" name="id" id="deleteTrxId">
+  </form>
+
+  <!-- Hidden Form: Batch Action -->
+  <form id="batchTrxActionForm" method="POST" action="<?php echo Helper::url('transactions'); ?>" class="hidden">
+    <?php echo Helper::csrfField(); ?>
+    <input type="hidden" name="action" id="batchTrxAction" value="batch_delete_transactions">
+    <div id="batchTrxInputsContainer"></div>
+  </form>
+
   <!-- Summary Cards -->
   <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
     <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-soft-sm flex items-center gap-4">
@@ -157,7 +206,11 @@ $totalReceivables = array_reduce($receivables, fn($sum, $t) => $sum + $t['amount
             <table class="items-center w-full mb-0 align-top border-gray-200 text-slate-500">
               <thead class="align-bottom">
                 <tr>
-                  <th class="px-6 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">No. Transaksi</th>
+                  <th class="w-10 px-4 py-3 text-center align-middle bg-transparent border-b border-gray-200 text-2xs">
+                    <input type="checkbox" onchange="toggleSelectAllTrx(this, 'income')" class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 cursor-pointer">
+                  </th>
+                  <th class="w-12 px-3 py-3 font-bold text-center uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">No</th>
+                  <th class="px-5 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">No. Transaksi</th>
                   <th class="px-6 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">Keterangan</th>
                   <th class="px-6 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">Kategori & Akun</th>
                   <th class="px-6 py-3 font-bold text-right uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">Nominal (Rp)</th>
@@ -167,10 +220,16 @@ $totalReceivables = array_reduce($receivables, fn($sum, $t) => $sum + $t['amount
               </thead>
               <tbody>
                 <?php if(empty($incomes)): ?>
-                  <tr><td colspan="6" class="p-6 text-center text-slate-400">Belum ada transaksi pemasukan.</td></tr>
-                <?php else: foreach ($incomes as $t): ?>
+                  <tr><td colspan="8" class="p-6 text-center text-slate-400">Belum ada transaksi pemasukan.</td></tr>
+                <?php else: $noInc = 1; foreach ($incomes as $t): ?>
                 <tr class="hover:bg-slate-50/50">
-                  <td class="p-3 px-6 align-middle bg-transparent border-b whitespace-nowrap text-xs font-mono font-bold text-emerald-700">
+                  <td class="p-3 text-center align-middle bg-transparent border-b">
+                    <input type="checkbox" name="trx_ids[]" value="<?php echo $t['id']; ?>" class="trx-checkbox trx-checkbox-income w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 cursor-pointer" onchange="updateSelectedTrxCount()">
+                  </td>
+                  <td class="p-3 text-center align-middle bg-transparent border-b text-xs font-bold text-slate-400 font-mono">
+                    <?php echo $noInc++; ?>
+                  </td>
+                  <td class="p-3 px-5 align-middle bg-transparent border-b whitespace-nowrap text-xs font-mono font-bold text-emerald-700">
                     <?php echo Helper::e($t['transaction_no']); ?>
                   </td>
                   <td class="p-3 px-6 align-middle bg-transparent border-b whitespace-nowrap">
@@ -224,7 +283,11 @@ $totalReceivables = array_reduce($receivables, fn($sum, $t) => $sum + $t['amount
             <table class="items-center w-full mb-0 align-top border-gray-200 text-slate-500">
               <thead class="align-bottom">
                 <tr>
-                  <th class="px-6 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">No. Transaksi</th>
+                  <th class="w-10 px-4 py-3 text-center align-middle bg-transparent border-b border-gray-200 text-2xs">
+                    <input type="checkbox" onchange="toggleSelectAllTrx(this, 'expense')" class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 cursor-pointer">
+                  </th>
+                  <th class="w-12 px-3 py-3 font-bold text-center uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">No</th>
+                  <th class="px-5 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">No. Transaksi</th>
                   <th class="px-6 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">Keterangan</th>
                   <th class="px-6 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">Kategori & Akun</th>
                   <th class="px-6 py-3 font-bold text-right uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">Nominal (Rp)</th>
@@ -234,10 +297,16 @@ $totalReceivables = array_reduce($receivables, fn($sum, $t) => $sum + $t['amount
               </thead>
               <tbody>
                 <?php if(empty($expenses)): ?>
-                  <tr><td colspan="6" class="p-6 text-center text-slate-400">Belum ada transaksi pengeluaran.</td></tr>
-                <?php else: foreach ($expenses as $t): ?>
+                  <tr><td colspan="8" class="p-6 text-center text-slate-400">Belum ada transaksi pengeluaran.</td></tr>
+                <?php else: $noExp = 1; foreach ($expenses as $t): ?>
                 <tr class="hover:bg-slate-50/50">
-                  <td class="p-3 px-6 align-middle bg-transparent border-b whitespace-nowrap text-xs font-mono font-bold text-rose-700">
+                  <td class="p-3 text-center align-middle bg-transparent border-b">
+                    <input type="checkbox" name="trx_ids[]" value="<?php echo $t['id']; ?>" class="trx-checkbox trx-checkbox-expense w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 cursor-pointer" onchange="updateSelectedTrxCount()">
+                  </td>
+                  <td class="p-3 text-center align-middle bg-transparent border-b text-xs font-bold text-slate-400 font-mono">
+                    <?php echo $noExp++; ?>
+                  </td>
+                  <td class="p-3 px-5 align-middle bg-transparent border-b whitespace-nowrap text-xs font-mono font-bold text-rose-700">
                     <?php echo Helper::e($t['transaction_no']); ?>
                   </td>
                   <td class="p-3 px-6 align-middle bg-transparent border-b whitespace-nowrap">
@@ -291,7 +360,11 @@ $totalReceivables = array_reduce($receivables, fn($sum, $t) => $sum + $t['amount
             <table class="items-center w-full mb-0 align-top border-gray-200 text-slate-500">
               <thead class="align-bottom">
                 <tr>
-                  <th class="px-6 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">No. Transaksi</th>
+                  <th class="w-10 px-4 py-3 text-center align-middle bg-transparent border-b border-gray-200 text-2xs">
+                    <input type="checkbox" onchange="toggleSelectAllTrx(this, 'debt')" class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 cursor-pointer">
+                  </th>
+                  <th class="w-12 px-3 py-3 font-bold text-center uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">No</th>
+                  <th class="px-5 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">No. Transaksi</th>
                   <th class="px-6 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">Keterangan</th>
                   <th class="px-6 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">Kategori & Akun</th>
                   <th class="px-6 py-3 font-bold text-right uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">Nominal (Rp)</th>
@@ -301,10 +374,16 @@ $totalReceivables = array_reduce($receivables, fn($sum, $t) => $sum + $t['amount
               </thead>
               <tbody>
                 <?php if(empty($debts)): ?>
-                  <tr><td colspan="6" class="p-6 text-center text-slate-400">Belum ada catatan hutang.</td></tr>
-                <?php else: foreach ($debts as $t): ?>
+                  <tr><td colspan="8" class="p-6 text-center text-slate-400">Belum ada catatan hutang.</td></tr>
+                <?php else: $noDebt = 1; foreach ($debts as $t): ?>
                 <tr class="hover:bg-slate-50/50">
-                  <td class="p-3 px-6 align-middle bg-transparent border-b whitespace-nowrap text-xs font-mono font-bold text-amber-700">
+                  <td class="p-3 text-center align-middle bg-transparent border-b">
+                    <input type="checkbox" name="trx_ids[]" value="<?php echo $t['id']; ?>" class="trx-checkbox trx-checkbox-debt w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 cursor-pointer" onchange="updateSelectedTrxCount()">
+                  </td>
+                  <td class="p-3 text-center align-middle bg-transparent border-b text-xs font-bold text-slate-400 font-mono">
+                    <?php echo $noDebt++; ?>
+                  </td>
+                  <td class="p-3 px-5 align-middle bg-transparent border-b whitespace-nowrap text-xs font-mono font-bold text-amber-700">
                     <?php echo Helper::e($t['transaction_no']); ?>
                   </td>
                   <td class="p-3 px-6 align-middle bg-transparent border-b whitespace-nowrap">
@@ -358,7 +437,11 @@ $totalReceivables = array_reduce($receivables, fn($sum, $t) => $sum + $t['amount
             <table class="items-center w-full mb-0 align-top border-gray-200 text-slate-500">
               <thead class="align-bottom">
                 <tr>
-                  <th class="px-6 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">No. Transaksi</th>
+                  <th class="w-10 px-4 py-3 text-center align-middle bg-transparent border-b border-gray-200 text-2xs">
+                    <input type="checkbox" onchange="toggleSelectAllTrx(this, 'receivable')" class="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 cursor-pointer">
+                  </th>
+                  <th class="w-12 px-3 py-3 font-bold text-center uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">No</th>
+                  <th class="px-5 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">No. Transaksi</th>
                   <th class="px-6 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">Keterangan</th>
                   <th class="px-6 py-3 font-bold text-left uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">Kategori & Akun</th>
                   <th class="px-6 py-3 font-bold text-right uppercase align-middle bg-transparent border-b border-gray-200 text-2xs tracking-tight text-slate-400 opacity-70">Nominal (Rp)</th>
@@ -368,10 +451,16 @@ $totalReceivables = array_reduce($receivables, fn($sum, $t) => $sum + $t['amount
               </thead>
               <tbody>
                 <?php if(empty($receivables)): ?>
-                  <tr><td colspan="6" class="p-6 text-center text-slate-400">Belum ada transaksi piutang.</td></tr>
-                <?php else: foreach ($receivables as $t): ?>
+                  <tr><td colspan="8" class="p-6 text-center text-slate-400">Belum ada transaksi piutang.</td></tr>
+                <?php else: $noRec = 1; foreach ($receivables as $t): ?>
                 <tr class="hover:bg-slate-50/50">
-                  <td class="p-3 px-6 align-middle bg-transparent border-b whitespace-nowrap text-xs font-mono font-bold text-blue-700">
+                  <td class="p-3 text-center align-middle bg-transparent border-b">
+                    <input type="checkbox" name="trx_ids[]" value="<?php echo $t['id']; ?>" class="trx-checkbox trx-checkbox-receivable w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 cursor-pointer" onchange="updateSelectedTrxCount()">
+                  </td>
+                  <td class="p-3 text-center align-middle bg-transparent border-b text-xs font-bold text-slate-400 font-mono">
+                    <?php echo $noRec++; ?>
+                  </td>
+                  <td class="p-3 px-5 align-middle bg-transparent border-b whitespace-nowrap text-xs font-mono font-bold text-blue-700">
                     <?php echo Helper::e($t['transaction_no']); ?>
                   </td>
                   <td class="p-3 px-6 align-middle bg-transparent border-b whitespace-nowrap">
@@ -842,6 +931,80 @@ function confirmDeleteTrx(id, trxNo) {
     document.getElementById('deleteTrxId').value = id;
     document.getElementById('deleteTrxForm').submit();
   }
+}
+
+// --- Batch Selection & Actions ---
+function updateSelectedTrxCount() {
+  const checkboxes = document.querySelectorAll('.trx-checkbox:checked');
+  const count = checkboxes.length;
+  const countSpan = document.getElementById('selectedTrxCount');
+  const batchBar = document.getElementById('batchActionBar');
+
+  if (countSpan) countSpan.textContent = count;
+
+  if (batchBar) {
+    if (count > 0) {
+      batchBar.classList.remove('hidden');
+      batchBar.classList.add('flex');
+    } else {
+      batchBar.classList.add('hidden');
+      batchBar.classList.remove('flex');
+    }
+  }
+}
+
+function toggleSelectAllTrx(masterCheckbox, tabType) {
+  const checkboxes = document.querySelectorAll('.trx-checkbox-' + tabType);
+  checkboxes.forEach(cb => {
+    cb.checked = masterCheckbox.checked;
+  });
+  updateSelectedTrxCount();
+}
+
+function deselectAllTrx() {
+  const checkboxes = document.querySelectorAll('.trx-checkbox');
+  checkboxes.forEach(cb => {
+    cb.checked = false;
+  });
+  const masterCheckboxes = document.querySelectorAll('thead input[type="checkbox"]');
+  masterCheckboxes.forEach(m => {
+    m.checked = false;
+  });
+  updateSelectedTrxCount();
+}
+
+function executeBatchDeleteTrx() {
+  const checked = document.querySelectorAll('.trx-checkbox:checked');
+  if (checked.length === 0) {
+    alert('Pilih setidaknya satu transaksi untuk dihapus.');
+    return;
+  }
+
+  if (confirm(`Apakah Anda yakin ingin menghapus ${checked.length} transaksi terpilih secara massal? Saldo rekening kas/bank terkait akan disesuaikan otomatis.`)) {
+    const container = document.getElementById('batchTrxInputsContainer');
+    container.innerHTML = '';
+
+    checked.forEach(cb => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'trx_ids[]';
+      input.value = cb.value;
+      container.appendChild(input);
+    });
+
+    document.getElementById('batchTrxAction').value = 'batch_delete_transactions';
+    document.getElementById('batchTrxActionForm').submit();
+  }
+}
+
+function executeBatchExportTrx() {
+  const checked = document.querySelectorAll('.trx-checkbox:checked');
+  if (checked.length === 0) {
+    alert('Pilih setidaknya satu transaksi untuk diexport.');
+    return;
+  }
+  const ids = Array.from(checked).map(cb => cb.value).join(',');
+  window.location.href = '<?php echo Helper::url("transactions_export_csv"); ?>&ids=' + encodeURIComponent(ids);
 }
 
 document.addEventListener('DOMContentLoaded', function() {

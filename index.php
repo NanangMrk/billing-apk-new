@@ -5,15 +5,13 @@ error_reporting(E_ALL);
 ini_set('display_errors', '1');
 date_default_timezone_set('Asia/Jakarta');
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
 // Autoload Core Services & Helpers
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/app/Helpers/Helper.php';
 require_once __DIR__ . '/app/Services/AuthService.php';
 require_once __DIR__ . '/app/Middleware/AuthMiddleware.php';
+
+AuthService::initSession();
 
 // Controllers
 require_once __DIR__ . '/app/Controllers/LandingController.php';
